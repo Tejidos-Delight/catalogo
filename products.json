@@ -1,0 +1,223 @@
+{
+  "products": [
+    {
+      "id": "1",
+      "name": "Stitch",
+      "category": "amigurumis",
+      "price": "$5.00",
+      "type": "standard",
+      "image": "imagenes/stitch.jpg",
+      "order": 1,
+      "sizeConfig": {
+        "type": "fixed",
+        "value": "10cm"
+      },
+      "packagingConfig": {
+        "type": "customizable",
+        "defaultValue": "Caja con visor",
+        "options": ["Caja con visor", "Bolsa de papel", "Funda transparente"]
+      }
+    },
+    {
+      "id": "2",
+      "name": "Amigurumi Personalizado",
+      "category": "amigurumis",
+      "price": "A cotizar",
+      "type": "custom",
+      "image": "imagenes/personalizado.jpg",
+      "order": 2,
+      "sizeConfig": {
+        "type": "customizable",
+        "defaultValue": "15cm",
+        "options": ["10cm", "15cm", "20cm", "25cm"]
+      },
+      "packagingConfig": {
+        "type": "customizable",
+        "defaultValue": "Caja con visor",
+        "options": ["Caja con visor", "Bolsa de papel", "Funda transparente"]
+      }
+    },
+    {
+      "id": "3",
+      "name": "Ramo de Hello Kitty",
+      "category": "flores",
+      "price": "$5.00",
+      "type": "standard",
+      "image": "imagenes/ramo-hello-kitty.jpg",
+      "order": 1,
+      "sizeConfig": {
+        "type": "fixed",
+        "value": "25cm"
+      },
+      "packagingConfig": {
+        "type": "fixed",
+        "value": "Papel de regalo"
+      }
+    },
+    {
+      "id": "4",
+      "name": "Ramo Personalizado",
+      "category": "flores",
+      "price": "A cotizar",
+      "type": "custom",
+      "image": "imagenes/personalizado.jpg",
+      "order": 2,
+      "sizeConfig": {
+        "type": "customizable",
+        "defaultValue": "30cm",
+        "options": ["25cm", "30cm", "35cm", "40cm"]
+      },
+      "packagingConfig": {
+        "type": "customizable",
+        "defaultValue": "Papel de regalo",
+        "options": ["Papel de regalo", "Caja premium", "Bolsa de tela"]
+      }
+    },
+    {
+      "id": "5",
+      "name": "Llavero Básico",
+      "category": "llaveros",
+      "price": "$3.00",
+      "type": "standard",
+      "image": "imagenes/llavero-basico.jpg",
+      "order": 1,
+      "sizeConfig": {
+        "type": "fixed",
+        "value": "5cm"
+      },
+      "packagingConfig": {
+        "type": "fixed",
+        "value": "Bolsa pequeña"
+      }
+    },
+    {
+      "id": "6",
+      "name": "Llavero Personalizado",
+      "category": "llaveros",
+      "price": "A cotizar",
+      "type": "custom",
+      "image": "imagenes/personalizado.jpg",
+      "order": 2,
+      "sizeConfig": {
+        "type": "customizable",
+        "defaultValue": "6cm",
+        "options": ["5cm", "6cm", "7cm", "8cm"]
+      },
+      "packagingConfig": {
+        "type": "customizable",
+        "defaultValue": "Bolsa pequeña",
+        "options": ["Bolsa pequeña", "Cajita", "Sobre"]
+      }
+    },
+    {
+      "id": "7",
+      "name": "Pulsera Básica",
+      "category": "pulseras",
+      "price": "$4.00",
+      "type": "standard",
+      "image": "imagenes/pulsera-basica.jpg",
+      "order": 1,
+      "sizeConfig": {
+        "type": "fixed",
+        "value": "Ajustable"
+      },
+      "packagingConfig": {
+        "type": "fixed",
+        "value": "Bolsa de organza"
+      }
+    },
+    {
+      "id": "8",
+      "name": "Pulsera Personalizada",
+      "category": "pulseras",
+      "price": "A cotizar",
+      "type": "custom",
+      "image": "imagenes/personalizado.jpg",
+      "order": 2,
+      "sizeConfig": {
+        "type": "customizable",
+        "defaultValue": "17cm",
+        "options": ["15cm", "17cm", "19cm", "21cm"]
+      },
+      "packagingConfig": {
+        "type": "customizable",
+        "defaultValue": "Bolsa de organza",
+        "options": ["Bolsa de organza", "Cajita", "Display"]
+      }
+    },
+    {
+      "id": "9",
+      "name": "Bolsa Básica",
+      "category": "bolsas",
+      "price": "$8.00",
+      "type": "standard",
+      "image": "imagenes/bolsa-basica.jpg",
+      "order": 1,
+      "sizeConfig": {
+        "type": "fixed",
+        "value": "10cm"
+      },
+      "packagingConfig": {
+        "type": "customizable",
+        "defaultValue": "Caja con visor",
+        "options": ["Caja con visor", "Bolsa de papel", "Funda transparente"]
+      }
+    },
+    {
+      "id": "10",
+      "name": "Bolsa Personalizada",
+      "category": "bolsas",
+      "price": "A cotizar",
+      "type": "custom",
+      "image": "imagenes/personalizado.jpg",
+      "order": 2,
+      "sizeConfig": {
+        "type": "customizable",
+        "defaultValue": "15cm",
+        "options": ["10cm", "15cm", "20cm", "25cm"]
+      },
+      "packagingConfig": {
+        "type": "customizable",
+        "defaultValue": "Caja con visor",
+        "options": ["Caja con visor", "Bolsa de papel", "Funda transparente"]
+      }
+    },
+    {
+      "id": "11",
+      "name": "Maceta Simple",
+      "category": "macetas",
+      "price": "$6.00",
+      "type": "standard",
+      "image": "imagenes/maceta-simple.jpg",
+      "order": 1,
+      "sizeConfig": {
+        "type": "fixed",
+        "value": "10cm"
+      },
+      "packagingConfig": {
+        "type": "customizable",
+        "defaultValue": "Caja con visor",
+        "options": ["Caja con visor", "Bolsa de papel", "Funda transparente"]
+      }
+    },
+    {
+      "id": "12",
+      "name": "Maceta Personalizada",
+      "category": "macetas",
+      "price": "A cotizar",
+      "type": "custom",
+      "image": "imagenes/personalizado.jpg",
+      "order": 2,
+      "sizeConfig": {
+        "type": "customizable",
+        "defaultValue": "15cm",
+        "options": ["10cm", "15cm", "20cm", "25cm"]
+      },
+      "packagingConfig": {
+        "type": "customizable",
+        "defaultValue": "Caja con visor",
+        "options": ["Caja con visor", "Bolsa de papel", "Funda transparente"]
+      }
+    }
+  ]
+}
