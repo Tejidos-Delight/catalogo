@@ -347,22 +347,46 @@ function loadDefaultProducts() {
     updateCategoryFilter();
 }
 
-// Guardar productos en localStorage
-function saveProducts() {
-    localStorage.setItem('tejidosDelightProducts', JSON.stringify(products));
-    
-    // Disparar un evento personalizado para notificar a otras páginas
-    if (window.parent !== window) {
-        window.parent.postMessage({ type: 'PRODUCTS_UPDATED', products: products }, '*');
-    }
-    
-    // También guardar en sessionStorage para sincronización inmediata
-    sessionStorage.setItem('productsUpdated', Date.now().toString());
-    
-    // Mostrar instrucciones para actualizar el archivo JSON
-    showAlert('Productos guardados en localStorage. Para que los cambios se vean en GitHub Pages, exporta el JSON y reemplaza el archivo products.json.', 'success');
-}
+// En admin.js - reemplazar saveProducts()
+async function saveProducts() {
+    try {
+        // Preparar productos para Supabase
+        const productsForDB = products.map(product => ({
+            id: product.id,
+            name: product.name,
+            category: product.category,
+            price: product.price,
+            type: product.type,
+            image_url: product.image,
+            size_config: product.sizeConfig,
+            packaging_config: product.packagingConfig,
+            product_order: product.order
+        }));
 
+        // Guardar en Supabase
+        const response = await fetch('https://tu-proyecto.supabase.co/rest/v1/products', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'apikey': 'tu-clave-publica-anon',
+                'Authorization': 'Bearer tu-clave-publica-anon',
+                'Prefer': 'resolution=merge-duplicates'
+            },
+            body: JSON.stringify(productsForDB)
+        });
+
+        if (response.ok) {
+            showAlert('✅ Productos guardados en base de datos', 'success');
+        } else {
+            throw new Error('Error en respuesta de Supabase');
+        }
+    } catch (error) {
+        console.error('Error guardando en Supabase:', error);
+        // Fallback a localStorage
+        localStorage.setItem('tejidosDelightProducts', JSON.stringify(products));
+        showAlert('✅ Productos guardados en localStorage (fallback)', 'success');
+    }
+}
 // Mostrar productos en la interfaz
 function displayProducts(filteredProducts = null) {
     let productsToDisplay = filteredProducts || products;

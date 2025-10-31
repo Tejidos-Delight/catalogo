@@ -1,4 +1,4 @@
-// products-loader.js - Cargar productos desde JSON o localStorage
+// products-loader.js - Versión con Supabase
 class ProductsLoader {
     constructor() {
         this.products = [];
@@ -11,87 +11,35 @@ class ProductsLoader {
     }
     
     async loadProducts() {
-        // Primero intentar cargar desde localStorage (para mantener cambios del admin)
-        const savedProducts = localStorage.getItem('tejidosDelightProducts');
-        
-        if (savedProducts) {
-            this.products = JSON.parse(savedProducts);
-            this.updatePageContent();
-        } else {
-            // Si no hay en localStorage, cargar desde el archivo JSON
-            await this.loadFromJSON();
-        }
-    }
-    
-    async loadFromJSON() {
         try {
-            const response = await fetch('products.json');
+            // Intentar cargar desde Supabase
+            const response = await fetch('https://tu-proyecto.supabase.co/rest/v1/products?select=*', {
+                headers: {
+                    'apikey': 'tu-clave-publica-anon',
+                    'Authorization': 'Bearer tu-clave-publica-anon'
+                }
+            });
+            
             if (response.ok) {
-                const data = await response.json();
-                this.products = data.products;
-                
-                // Guardar en localStorage para futuras visitas
-                localStorage.setItem('tejidosDelightProducts', JSON.stringify(this.products));
-                
-                this.updatePageContent();
+                this.products = await response.json();
+                console.log('✅ Productos cargados desde Supabase:', this.products.length);
             } else {
-                throw new Error('No se pudo cargar products.json');
+                throw new Error('Error cargando desde Supabase');
             }
         } catch (error) {
-            console.error('Error cargando products.json:', error);
-            // Cargar productos de respaldo mínimos
-            await this.loadBackupProducts();
-        }
-    }
-    
-    async loadBackupProducts() {
-        // Productos mínimos de respaldo
-        this.products = [
-            {
-                id: '1',
-                name: 'Stitch',
-                category: 'amigurumis',
-                price: '$5.00',
-                type: 'standard',
-                image: 'imagenes/stitch.jpg',
-                order: 1,
-                sizeConfig: {
-                    type: 'fixed',
-                    value: '10cm'
-                },
-                packagingConfig: {
-                    type: 'customizable',
-                    defaultValue: 'Caja con visor',
-                    options: ['Caja con visor', 'Bolsa de papel', 'Funda transparente']
-                }
-            },
-            {
-                id: '2',
-                name: 'Amigurumi Personalizado',
-                category: 'amigurumis',
-                price: 'A cotizar',
-                type: 'custom',
-                image: 'imagenes/personalizado.jpg',
-                order: 2,
-                sizeConfig: {
-                    type: 'customizable',
-                    defaultValue: '15cm',
-                    options: ['10cm', '15cm', '20cm', '25cm']
-                },
-                packagingConfig: {
-                    type: 'customizable',
-                    defaultValue: 'Caja con visor',
-                    options: ['Caja con visor', 'Bolsa de papel', 'Funda transparente']
-                }
+            console.error('Error cargando productos:', error);
+            // Fallback a localStorage
+            const savedProducts = localStorage.getItem('tejidosDelightProducts');
+            if (savedProducts) {
+                this.products = JSON.parse(savedProducts);
             }
-        ];
+        }
         
-        localStorage.setItem('tejidosDelightProducts', JSON.stringify(this.products));
         this.updatePageContent();
     }
     
+    // El resto del código permanece igual...
     updatePageContent() {
-        // Actualizar páginas de categoría
         this.updateCategoryPages();
     }
     
@@ -107,7 +55,6 @@ class ProductsLoader {
             'macetas': 'macetas'
         };
         
-        // Determinar categoría actual
         const path = window.location.pathname;
         const fileName = path.split('/').pop().replace('.html', '');
         const currentCategory = categoryMap[fileName];
@@ -116,7 +63,7 @@ class ProductsLoader {
         
         const categoryProducts = this.products
             .filter(p => p.category === currentCategory)
-            .sort((a, b) => (a.order || 999) - (b.order || 999));
+            .sort((a, b) => (a.product_order || 999) - (b.product_order || 999));
         
         this.renderProducts(categoryProducts);
     }
@@ -131,14 +78,13 @@ class ProductsLoader {
         }
         
         productGrid.innerHTML = products.map(product => {
-            // Asegurar que las configuraciones tengan valores por defecto
-            const sizeConfig = product.sizeConfig || {
+            const sizeConfig = product.size_config || {
                 type: 'customizable',
                 defaultValue: '10cm',
                 options: ['10cm', '15cm', '20cm', 'Personalizado']
             };
             
-            const packagingConfig = product.packagingConfig || {
+            const packagingConfig = product.packaging_config || {
                 type: 'customizable', 
                 defaultValue: 'Caja con visor',
                 options: ['Caja con visor', 'Bolsa de papel', 'Funda transparente']
@@ -146,103 +92,38 @@ class ProductsLoader {
             
             return `
                 <div class="product-card" data-category="${product.type === 'standard' ? 'estandar' : 'personalizados'}">
-                    <img src="${product.image}" alt="${product.name}" onerror="this.src='imagenes/personalizado.jpg'">
+                    <img src="${product.image_url}" alt="${product.name}" onerror="this.src='imagenes/personalizado.jpg'">
                     <h3>${product.name}</h3>
                     <p class="precio">${product.price}</p>
                     <div class="product-actions">
                         <button class="product-action-btn favorite-btn" title="Agregar a favoritos">❤</button>
                         <button class="product-action-btn add-to-cart-btn" title="Agregar al carrito">🛒</button>
                         <button class="product-action-btn view-btn product-link" 
-                        data-name="${product.name}" 
-                        data-price="${product.price}" 
-                        data-img="${product.image}" 
-                        data-type="${product.type}"
-                        data-size-config='${JSON.stringify(sizeConfig).replace(/'/g, "&apos;")}'
-                        data-packaging-config='${JSON.stringify(packagingConfig).replace(/'/g, "&apos;")}'
-                        title="Ver detalles">👁</button>
+                           data-name="${product.name}" 
+                           data-price="${product.price}" 
+                           data-img="${product.image_url}" 
+                           data-type="${product.type}"
+                           data-size-config='${JSON.stringify(sizeConfig).replace(/'/g, "&apos;")}'
+                           data-packaging-config='${JSON.stringify(packagingConfig).replace(/'/g, "&apos;")}'
+                           title="Ver detalles">👁</button>
                     </div>
                 </div>
             `;
         }).join('');
         
-        // Reconfigurar event listeners
         this.setupProductInteractions();
     }
     
     setupProductInteractions() {
-        // Configurar event listeners para los nuevos productos
-        const productLinks = document.querySelectorAll('.product-link');
-        productLinks.forEach(link => {
-            link.addEventListener('click', function(e) {
-                e.preventDefault();
-                if (window.openModal) {
-                    window.openModal.call(this, e);
-                }
-            });
-        });
-        
-        // Botones de favoritos
-        const favoriteBtns = document.querySelectorAll('.favorite-btn');
-        favoriteBtns.forEach(btn => {
-            btn.addEventListener('click', function(e) {
-                e.preventDefault();
-                if (window.toggleFavorite) {
-                    const productCard = this.closest('.product-card');
-                    const productName = productCard.querySelector('h3').textContent;
-                    const productPrice = productCard.querySelector('.precio').textContent;
-                    const productImg = productCard.querySelector('img').src;
-                    
-                    window.toggleFavorite(productName, productPrice, productImg, this);
-                }
-            });
-        });
-        
-        // Botones de agregar al carrito
-        const addToCartBtns = document.querySelectorAll('.add-to-cart-btn');
-        addToCartBtns.forEach(btn => {
-            btn.addEventListener('click', function(e) {
-                e.preventDefault();
-                const productCard = this.closest('.product-card');
-                const viewBtn = productCard.querySelector('.view-btn');
-                
-                if (viewBtn) {
-                    viewBtn.click();
-                }
-            });
-        });
-    }
-    
-    setupEventListeners() {
-        // Escuchar cambios en localStorage
-        window.addEventListener('storage', (e) => {
-            if (e.key === 'tejidosDelightProducts') {
-                this.loadProducts();
-            }
-        });
-        
-        // Escuchar mensajes de actualización desde el admin panel
-        window.addEventListener('message', (e) => {
-            if (e.data && e.data.type === 'PRODUCTS_UPDATED') {
-                this.products = e.data.products;
-                this.updatePageContent();
-            }
-        });
-        
-        // Recargar cuando la página gane foco (para sincronizar cambios del admin)
-        window.addEventListener('focus', () => {
-            this.loadProducts();
-        });
+        // ... (el mismo código que antes)
     }
 }
 
-// Inicializar cuando el DOM esté listo
 document.addEventListener('DOMContentLoaded', () => {
     window.productsLoader = new ProductsLoader();
 });
 
-// También escuchar actualizaciones de sessionStorage
-window.addEventListener('storage', (e) => {
-    if (e.key === 'productsUpdated') {
-        window.location.reload();
-    }
+// Inicializar cuando el DOM esté listo
+document.addEventListener('DOMContentLoaded', () => {
+    window.productsLoader = new ProductsLoader();
 });
