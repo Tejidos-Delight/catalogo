@@ -114,7 +114,7 @@ async function loadAndRenderProducts() {
             productGrid.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:40px;">No hay productos</div>';
             return;
         }
-
+        // sdasd
         // RENDERIZAR con estilos adecuados
         productGrid.innerHTML = categoryProducts.map(product => `
             <div class="product-card" data-category="${product.type === 'standard' ? 'estandar' : 'personalizados'}">
