@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Products</title>
+    <style>
+        body { font-family: Arial; padding: 20px; }
+        .log { background: #f5f5f5; padding: 10px; margin: 5px 0; border-left: 4px solid #007acc; }
+        .error { border-color: #d9534f; background: #f8d7da; }
+        .success { border-color: #28a745; background: #d4edda; }
+        .warning { border-color: #ffc107; background: #fff3cd; }
+    </style>
+</head>
+<body>
+    <h1>Debug de Carga de Productos</h1>
+    <button onclick="testConnection()">Probar Conexión Supabase</button>
+    <button onclick="loadProducts()">Cargar Productos</button>
+    <button onclick="clearLog()">Limpiar Log</button>
+    
+    <div id="log-container"></div>
+    
+    <div id="products-display" style="margin-top: 20px; border: 1px solid #ccc; padding: 20px;"></div>
+
+    <script>
+        const SUPABASE_URL = 'https://egjlhlkholudjpjesunj.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVnamxobGtob2x1ZGpwamVzdW5qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5MzA5NDAsImV4cCI6MjA3NzUwNjk0MH0.KSIKD0QdwxO2GTXl60SiXz32y-AQlEi-CIsLBRsU_wg';
+        
+        function log(message, type = 'info') {
+            const logContainer = document.getElementById('log-container');
+            const logEntry = document.createElement('div');
+            logEntry.className = `log ${type}`;
+            logEntry.innerHTML = `<strong>${new Date().toLocaleTimeString()}:</strong> ${message}`;
+            logContainer.appendChild(logEntry);
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+        
+        function clearLog() {
+            document.getElementById('log-container').innerHTML = '';
+        }
+        
+        async function testConnection() {
+            log('🔍 Probando conexión a Supabase...', 'warning');
+            
+            try {
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/products?select=count`, {
+                    headers: {
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    log(`✅ CONEXIÓN EXITOSA - ${data.length} productos encontrados`, 'success');
+                } else {
+                    log(`❌ Error HTTP: ${response.status}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ Error de conexión: ${error.message}`, 'error');
+            }
+        }
+        
+        async function loadProducts() {
+            log('📥 Cargando productos...', 'warning');
+            
+            try {
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/products?select=*`, {
+                    headers: {
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                log(`📊 Status: ${response.status}, OK: ${response.ok}`, 'info');
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    log(`✅ ${data.length} productos cargados correctamente`, 'success');
+                    
+                    // Mostrar productos
+                    displayProducts(data);
+                    
+                    // Mostrar datos crudos
+                    log(`📋 Datos crudos: ${JSON.stringify(data, null, 2)}`, 'info');
+                } else {
+                    const errorText = await response.text();
+                    log(`❌ Error en respuesta: ${errorText}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ Error cargando productos: ${error.message}`, 'error');
+            }
+        }
+        
+        function displayProducts(products) {
+            const container = document.getElementById('products-display');
+            
+            if (products.length === 0) {
+                container.innerHTML = '<p>No hay productos</p>';
+                return;
+            }
+            
+            container.innerHTML = `
+                <h3>Productos Encontrados (${products.length})</h3>
+                ${products.map(product => `
+                    <div style="border: 1px solid #ddd; padding: 10px; margin: 10px 0;">
+                        <h4>${product.name}</h4>
+                        <p><strong>Categoría:</strong> ${product.category}</p>
+                        <p><strong>Precio:</strong> ${product.price}</p>
+                        <p><strong>Tipo:</strong> ${product.type}</p>
+                        <p><strong>Imagen:</strong> ${product.image_url}</p>
+                        <p><strong>ID:</strong> ${product.id}</p>
+                    </div>
+                `).join('')}
+            `;
+        }
+        
+        // Auto-test al cargar
+        setTimeout(() => {
+            testConnection();
+            loadProducts();
+        }, 1000);
+    </script>
+</body>
+</html>
