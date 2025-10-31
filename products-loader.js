@@ -1,4 +1,4 @@
-// products-loader.js - VERSIÓN DIRECTA Y FUNCIONAL
+// products-loader.js - VERSIÓN CON ESTILOS CRÍTICOS
 console.log('🔧 products-loader.js cargado');
 
 async function loadAndRenderProducts() {
@@ -10,14 +10,75 @@ async function loadAndRenderProducts() {
         return;
     }
 
-    // Mostrar loading
-    productGrid.innerHTML = '<div style="grid-column: 1/-1; text-align:center; padding:40px;">Cargando productos...</div>';
+    // Agregar estilos críticos si no existen
+    if (!document.querySelector('#critical-styles')) {
+        const criticalStyles = `
+            <style id="critical-styles">
+                .product-grid {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+                    gap: 15px;
+                    padding: 20px 0;
+                }
+                .product-card {
+                    background: white;
+                    border-radius: 12px;
+                    padding: 15px;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+                    text-align: center;
+                    transition: transform 0.3s ease;
+                }
+                .product-card:hover {
+                    transform: translateY(-5px);
+                }
+                .product-card img {
+                    width: 100%;
+                    height: 150px;
+                    object-fit: cover;
+                    border-radius: 8px;
+                    margin-bottom: 10px;
+                }
+                .product-card h3 {
+                    font-family: 'Josefin Sans', sans-serif;
+                    font-size: 1em;
+                    margin: 10px 0 5px;
+                    color: #333;
+                }
+                .precio {
+                    font-size: 1.1em;
+                    font-weight: bold;
+                    color: #d9534f;
+                    margin: 5px 0;
+                }
+                .product-actions {
+                    display: flex;
+                    justify-content: space-between;
+                    margin-top: 10px;
+                }
+                .product-action-btn {
+                    background: none;
+                    border: none;
+                    font-size: 1.1em;
+                    cursor: pointer;
+                    padding: 5px;
+                    border-radius: 50%;
+                    width: 30px;
+                    height: 30px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                }
+                .product-action-btn:hover {
+                    background: rgba(217, 83, 79, 0.1);
+                }
+            </style>
+        `;
+        document.head.insertAdjacentHTML('beforeend', criticalStyles);
+    }
 
     try {
         const SUPABASE_URL = 'https://egjlhlkholudjpjesunj.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVnamxobGtob2x1ZGpwamVzdW5qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5MzA5NDAsImV4cCI6MjA3NzUwNjk0MH0.KSIKD0QdwxO2GTXl60SiXz32y-AQlEi-CIsLBRsU_wg';
-        
-        console.log('📡 Haciendo fetch a Supabase...');
         
         const response = await fetch(`${SUPABASE_URL}/rest/v1/products?select=*`, {
             headers: {
@@ -27,109 +88,64 @@ async function loadAndRenderProducts() {
             }
         });
 
-        console.log('📊 Response status:', response.status, response.ok);
-
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${await response.text()}`);
-        }
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
         const products = await response.json();
-        console.log('✅ Productos obtenidos:', products);
 
         // Determinar categoría actual
         const path = window.location.pathname;
         const fileName = path.split('/').pop().replace('.html', '');
-        console.log('📄 Página actual:', fileName);
         
         const categoryMap = {
-            'amigurumis': 'amigurumis',
-            'flores': 'flores',
-            'llaveros': 'llaveros', 
-            'pulseras': 'pulseras',
-            'colgantes': 'colgantes',
-            'combos': 'combos',
-            'bolsas': 'bolsas',
-            'macetas': 'macetas'
+            'amigurumis': 'amigurumis', 'flores': 'flores', 'llaveros': 'llaveros', 
+            'pulseras': 'pulseras', 'colgantes': 'colgantes', 'combos': 'combos', 
+            'bolsas': 'bolsas', 'macetas': 'macetas'
         };
         
         const currentCategory = categoryMap[fileName];
-        console.log('🎯 Categoría filtrada:', currentCategory);
+        if (!currentCategory) return;
 
-        if (!currentCategory) {
-            productGrid.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:40px; color:red;">Error: No es página de categoría</div>';
-            return;
-        }
-
-        // Filtrar productos por categoría
+        // Filtrar y ordenar productos
         const categoryProducts = products
             .filter(p => p.category === currentCategory)
             .sort((a, b) => (a.product_order || 999) - (b.product_order || 999));
 
-        console.log(`📦 Productos filtrados para ${currentCategory}:`, categoryProducts);
-
         if (categoryProducts.length === 0) {
-            productGrid.innerHTML = `
-                <div style="grid-column: 1/-1; text-align:center; padding:40px; color:#666;">
-                    <p>No hay productos en esta categoría.</p>
-                    <a href="admin.html" style="color:#d9534f;">Agregar productos</a>
-                </div>
-            `;
+            productGrid.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:40px;">No hay productos</div>';
             return;
         }
 
-        // RENDERIZAR DIRECTAMENTE
+        // RENDERIZAR con estilos adecuados
         productGrid.innerHTML = categoryProducts.map(product => `
             <div class="product-card" data-category="${product.type === 'standard' ? 'estandar' : 'personalizados'}">
                 <img src="${product.image_url}" alt="${product.name}" 
-                     onerror="this.src='imagenes/personalizado.jpg'" 
-                     style="width:100%; height:150px; object-fit:cover; border-radius:8px;">
+                     onerror="this.onerror=null; this.src='imagenes/personalizado.jpg'">
                 <h3>${product.name}</h3>
                 <p class="precio">${product.price}</p>
                 <div class="product-actions">
-                    <button class="product-action-btn favorite-btn">❤</button>
-                    <button class="product-action-btn add-to-cart-btn">🛒</button>
+                    <button class="product-action-btn favorite-btn" title="Favorito">❤</button>
+                    <button class="product-action-btn add-to-cart-btn" title="Carrito">🛒</button>
                     <button class="product-action-btn view-btn product-link" 
                        data-name="${product.name}" 
                        data-price="${product.price}" 
                        data-img="${product.image_url}" 
                        data-type="${product.type}"
-                       data-size-config='${JSON.stringify(product.size_config || {type: 'customizable'})}'
-                       data-packaging-config='${JSON.stringify(product.packaging_config || {type: 'customizable'})}'
+                       data-size-config='${JSON.stringify(product.size_config || {})}'
+                       data-packaging-config='${JSON.stringify(product.packaging_config || {})}'
                        title="Ver detalles">👁</button>
                 </div>
             </div>
         `).join('');
 
-        console.log('🎉 PRODUCTOS RENDERIZADOS EXITOSAMENTE');
+        console.log('🎉 PRODUCTOS RENDERIZADOS CON ESTILOS');
 
     } catch (error) {
-        console.error('💥 Error crítico:', error);
-        const productGrid = document.querySelector('.product-grid');
-        if (productGrid) {
-            productGrid.innerHTML = `
-                <div style="grid-column:1/-1; text-align:center; padding:40px; color:red;">
-                    <p>Error cargando productos: ${error.message}</p>
-                    <button onclick="loadAndRenderProducts()" style="padding:10px 20px; background:#d9534f; color:white; border:none; border-radius:5px; cursor:pointer;">
-                        Reintentar
-                    </button>
-                </div>
-            `;
-        }
+        console.error('Error:', error);
+        productGrid.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:40px; color:red;">Error cargando productos</div>';
     }
 }
 
-// Inicialización inmediata
-console.log('🚀 Ejecutando carga automática...');
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('📄 DOM cargado, iniciando render...');
-    setTimeout(loadAndRenderProducts, 100);
-});
-
-// También ejecutar después de un tiempo por si el DOM ya está listo
-setTimeout(() => {
-    console.log('⏰ Timeout de seguridad ejecutándose...');
-    loadAndRenderProducts();
-}, 1000);
-
-// Hacerla global para poder llamarla manualmente
+// Inicialización
+document.addEventListener('DOMContentLoaded', loadAndRenderProducts);
+setTimeout(loadAndRenderProducts, 1000);
 window.loadAndRenderProducts = loadAndRenderProducts;
