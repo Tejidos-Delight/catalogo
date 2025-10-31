@@ -2,8 +2,8 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'
 
 // Configuración - REEMPLAZA con tus credenciales
-const supabaseUrl = 'https://tu-proyecto.supabase.co'
-const supabaseKey = 'tu-clave-publica-anon'
+const supabaseUrl = 'https://egjlhlkholudjpjesunj.supabase.co'
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVnamxobGtob2x1ZGpwamVzdW5qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5MzA5NDAsImV4cCI6MjA3NzUwNjk0MH0.KSIKD0QdwxO2GTXl60SiXz32y-AQlEi-CIsLBRsU_wg'
 export const supabase = createClient(supabaseUrl, supabaseKey)
 
 // Funciones para productos

@@ -13,10 +13,10 @@ class ProductsLoader {
     async loadProducts() {
         try {
             // Intentar cargar desde Supabase
-            const response = await fetch('https://tu-proyecto.supabase.co/rest/v1/products?select=*', {
+            const response = await fetch('https://egjlhlkholudjpjesunj.supabase.co', {
                 headers: {
-                    'apikey': 'tu-clave-publica-anon',
-                    'Authorization': 'Bearer tu-clave-publica-anon'
+                    'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVnamxobGtob2x1ZGpwamVzdW5qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5MzA5NDAsImV4cCI6MjA3NzUwNjk0MH0.KSIKD0QdwxO2GTXl60SiXz32y-AQlEi-CIsLBRsU_wg',
+                    'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVnamxobGtob2x1ZGpwamVzdW5qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5MzA5NDAsImV4cCI6MjA3NzUwNjk0MH0.KSIKD0QdwxO2GTXl60SiXz32y-AQlEi-CIsLBRsU_wg'
                 }
             });
             
