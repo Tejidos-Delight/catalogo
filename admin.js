@@ -456,7 +456,9 @@ function previewImage(event) {
     }
 }
 
-// Guardar producto (nuevo o editado)
+// =================================================================
+// FUNCIÓN saveProduct - CORREGIDA
+// =================================================================
 async function saveProduct(event) {
     event.preventDefault();
     
@@ -466,7 +468,7 @@ async function saveProduct(event) {
     const price = document.getElementById('product-price').value;
     const type = document.getElementById('product-type').value;
     const imageUrl = document.getElementById('product-image-url').value;
-    const description = document.getElementById('product-description').value;
+    // const description = document.getElementById('product-description').value; // --- CORRECCIÓN: LÍNEA ELIMINADA ---
     
     // Obtener configuración de tamaño
     const sizeType = document.querySelector('input[name="size-type"]:checked').value;
@@ -528,56 +530,128 @@ async function saveProduct(event) {
             packagingConfig.defaultValue = packagingConfig.options[0];
         }
     }
+
+    // --- LÓGICA CORREGIDA ---
     
-    // Si estamos editando
-    if (productId) {
-        const productIndex = products.findIndex(p => p.id === productId);
-        
-        if (productIndex !== -1) {
-            products[productIndex] = {
+    // 1. Crear el objeto de datos (sin ID)
+    const productData = {
+        name: name,
+        category: category,
+        price: price,
+        type: type,
+        image_url: imageUrl || 'imagenes/personalizado.jpg',
+        // description: description || '', // --- CORRECCIÓN: LÍNEA ELIMINADA ---
+        size_config: sizeConfig,
+        packaging_config: packagingConfig
+        // El 'product_order' se añade condicionalmente
+    };
+
+    try {
+        if (productId) {
+            // --- ESTAMOS EDITANDO ---
+            console.log('🔄 Actualizando producto en Supabase:', productId);
+            const productIndex = products.findIndex(p => p.id === productId);
+            if (productIndex === -1) {
+                throw new Error("No se encontró el producto para actualizar");
+            }
+            
+            // Mantener el orden original al editar
+            productData.product_order = products[productIndex].order || 999;
+
+            const response = await fetch(`${SUPABASE_CONFIG.url}/rest/v1/products?id=eq.${productId}`, {
+                method: 'PATCH', // Usar PATCH para actualizar
+                headers: SUPABASE_CONFIG.headers,
+                body: JSON.stringify(productData)
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Error actualizando: ${errorText}`);
+            }
+            
+            // Actualizar el array local
+            // Mapeamos los campos devueltos por Supabase
+            products[productIndex] = { 
                 ...products[productIndex],
-                name,
-                category,
-                price,
-                type,
-                image: imageUrl || products[productIndex].image,
-                description: description || products[productIndex].description,
-                sizeConfig,
-                packagingConfig
+                name: productData.name,
+                category: productData.category,
+                price: productData.price,
+                type: productData.type,
+                image: productData.image_url,
+                // description: productData.description, // --- CORRECCIÓN: LÍNEA ELIMINADA ---
+                sizeConfig: productData.size_config,
+                packagingConfig: productData.packaging_config
             };
             
             showAlert('Producto actualizado correctamente.', 'success');
+            
+        } else {
+            // --- ESTAMOS CREANDO UNO NUEVO ---
+            // (Aquí estaba el error)
+            console.log('➕ Creando nuevo producto en Supabase...');
+
+            // Determinar el orden
+            const categoryProducts = products.filter(p => p.category === category);
+            const maxOrder = categoryProducts.length > 0 ? 
+                Math.max(...categoryProducts.map(p => p.order || 0)) : 0;
+            productData.product_order = maxOrder + 1;
+            
+            // NO AÑADIR ID, DEJAR QUE SUPABASE LO GENERE
+            const response = await fetch(`${SUPABASE_CONFIG.url}/rest/v1/products`, {
+                method: 'POST',
+                headers: {
+                    ...SUPABASE_CONFIG.headers,
+                    'Prefer': 'return=representation' // Pedir que devuelva el objeto creado
+                },
+                body: JSON.stringify(productData)
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Error creando: ${errorText}`);
+            }
+
+            const newProductData = await response.json();
+            const newProduct = newProductData[0];
+            
+            // Añadir el producto nuevo (con el ID real de Supabase) al array local
+            products.push({
+                id: newProduct.id,
+                name: newProduct.name,
+                category: newProduct.category,
+                price: newProduct.price,
+                type: newProduct.type,
+                image: newProduct.image_url,
+                // description: newProduct.description, // --- CORRECCIÓN: LÍNEA ELIMINADA ---
+                order: newProduct.product_order,
+                sizeConfig: newProduct.size_config,
+                packagingConfig: newProduct.packaging_config
+            });
+            showAlert('Producto agregado correctamente.', 'success');
         }
-    } else {
-        // Nuevo producto - determinar el orden
-        const categoryProducts = products.filter(p => p.category === category);
-        const maxOrder = categoryProducts.length > 0 ? 
-            Math.max(...categoryProducts.map(p => p.order || 0)) : 0;
         
-        const newProduct = {
-            id: generateId(),
-            name,
-            category,
-            price,
-            type,
-            image: imageUrl || 'imagenes/personalizado.jpg',
-            description: description || '',
-            order: maxOrder + 1,
-            sizeConfig,
-            packagingConfig
-        };
+        // NO LLAMAMOS A saveProducts() porque ya hicimos la operación
         
-        products.push(newProduct);
-        showAlert('Producto agregado correctamente.', 'success');
+        // Guardar en localStorage como backup (ahora sí con el ID correcto)
+        localStorage.setItem('tejidosDelightProducts', JSON.stringify(products));
+
+        resetForm();
+        showSection('products'); // Esto llamará a displayProducts()
+        displayProducts(); // Forzar actualización de la vista
+
+    } catch (error) {
+        console.error('❌ Error guardando en Supabase:', error);
+        showAlert(`Error: ${error.message}`, 'error');
     }
-    
-    await saveProducts();
-    resetForm();
-    showSection('products');
 }
+// =================================================================
+// FIN DE LA FUNCIÓN CORREGIDA
+// =================================================================
+
 
 // Guardar productos (función principal)
 async function saveProducts() {
+    // Esta función ahora solo se usa para operaciones en lote (mover, importar)
     try {
         await saveProductsToSupabase();
         showAlert('✅ Productos guardados en base de datos', 'success');
@@ -589,10 +663,8 @@ async function saveProducts() {
     }
 }
 
-// Generar ID único
-function generateId() {
-    return Date.now().toString(36) + Math.random().toString(36).substr(2);
-}
+// --- FUNCIÓN generateId() ELIMINADA ---
+// Ya no es necesaria, Supabase genera los IDs
 
 // Editar producto
 function editProduct(id) {
@@ -605,7 +677,7 @@ function editProduct(id) {
         document.getElementById('product-category').value = product.category;
         document.getElementById('product-price').value = product.price;
         document.getElementById('product-type').value = product.type;
-        document.getElementById('product-description').value = product.description || '';
+        // document.getElementById('product-description').value = product.description || ''; // --- CORRECCIÓN: LÍNEA ELIMINADA ---
         
         // Configurar tamaño
         if (product.sizeConfig && product.sizeConfig.type === 'fixed') {
