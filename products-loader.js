@@ -1,4 +1,4 @@
-// products-loader.js - VERSIÓN CON ESTILOS CRÍTICOS
+// products-loader.js - CORREGIDO
 console.log('🔧 products-loader.js cargado');
 
 async function loadAndRenderProducts() {
@@ -103,7 +103,12 @@ async function loadAndRenderProducts() {
         };
         
         const currentCategory = categoryMap[fileName];
-        if (!currentCategory) return;
+        
+        if (!currentCategory) {
+             // Si la categoría no existe, igual muestra la cuadrícula (vacía)
+            productGrid.classList.add('loaded');
+            return;
+        }
 
         // Filtrar y ordenar productos
         const categoryProducts = products
@@ -112,36 +117,41 @@ async function loadAndRenderProducts() {
 
         if (categoryProducts.length === 0) {
             productGrid.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:40px;">No hay productos</div>';
-            return;
-        }
-        // sdasd
-        // RENDERIZAR con estilos adecuados
-        productGrid.innerHTML = categoryProducts.map(product => `
-            <div class="product-card" data-category="${product.type === 'standard' ? 'estandar' : 'personalizados'}">
-                <img src="${product.image_url}" alt="${product.name}" 
-                     onerror="this.onerror=null; this.src='imagenes/personalizado.jpg'">
-                <h3>${product.name}</h3>
-                <p class="precio">${product.price}</p>
-                <div class="product-actions">
-                    <button class="product-action-btn favorite-btn" title="Favorito">❤</button>
-                    <button class="product-action-btn add-to-cart-btn" title="Carrito">🛒</button>
-                    <button class="product-action-btn view-btn product-link" 
-                       data-name="${product.name}" 
-                       data-price="${product.price}" 
-                       data-img="${product.image_url}" 
-                       data-type="${product.type}"
-                       data-size-config='${JSON.stringify(product.size_config || {})}'
-                       data-packaging-config='${JSON.stringify(product.packaging_config || {})}'
-                       title="Ver detalles">👁</button>
+        } else {
+            // RENDERIZAR con estilos adecuados
+            productGrid.innerHTML = categoryProducts.map(product => `
+                <div class="product-card" data-category="${product.type === 'standard' ? 'estandar' : 'personalizados'}">
+                    <img src="${product.image_url}" alt="${product.name}" 
+                         onerror="this.onerror=null; this.src='imagenes/personalizado.jpg'">
+                    <h3>${product.name}</h3>
+                    <p class="precio">${product.price}</p>
+                    <div class="product-actions">
+                        <button class="product-action-btn favorite-btn" title="Favorito">❤</button>
+                        <button class="product-action-btn add-to-cart-btn" title="Carrito">🛒</button>
+                        <button class="product-action-btn view-btn product-link" 
+                           data-name="${product.name}" 
+                           data-price="${product.price}" 
+                           data-img="${product.image_url}" 
+                           data-type="${product.type}"
+                           data-size-config='${JSON.stringify(product.size_config || {})}'
+                           data-packaging-config='${JSON.stringify(product.packaging_config || {})}'
+                           title="Ver detalles">👁</button>
+                    </div>
                 </div>
-            </div>
-        `).join('');
+            `).join('');
 
-        console.log('🎉 PRODUCTOS RENDERIZADOS CON ESTILOS');
+            console.log('🎉 PRODUCTOS RENDERIZADOS CON ESTILOS');
+        }
+
+        // --- CORRECCIÓN 1: Mostrar la cuadrícula después de cargar ---
+        productGrid.classList.add('loaded');
 
     } catch (error) {
         console.error('Error:', error);
         productGrid.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:40px; color:red;">Error cargando productos</div>';
+        
+        // --- CORRECCIÓN 2: Mostrar la cuadrícula incluso si hay error ---
+        productGrid.classList.add('loaded');
     }
 }
 
