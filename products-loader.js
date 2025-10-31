@@ -1,4 +1,4 @@
-// products-loader.js - Versión con Supabase
+// products-loader.js - Versión con Supabase (ACTUALIZADA)
 class ProductsLoader {
     constructor() {
         this.products = [];
@@ -12,33 +12,67 @@ class ProductsLoader {
     
     async loadProducts() {
         try {
+            // CONFIGURACIÓN REAL
+            const SUPABASE_URL = 'https://egjlhlkholudjpjesunj.supabase.co';
+            const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVnamxobGtob2x1ZGpwamVzdW5qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5MzA5NDAsImV4cCI6MjA3NzUwNjk0MH0.KSIKD0QdwxO2GTXl60SiXz32y-AQlEi-CIsLBRsU_wg';
+            
             // Intentar cargar desde Supabase
-            const response = await fetch('https://egjlhlkholudjpjesunj.supabase.co', {
+            const response = await fetch(`${SUPABASE_URL}/rest/v1/products?select=*`, {
                 headers: {
-                    'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVnamxobGtob2x1ZGpwamVzdW5qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5MzA5NDAsImV4cCI6MjA3NzUwNjk0MH0.KSIKD0QdwxO2GTXl60SiXz32y-AQlEi-CIsLBRsU_wg',
-                    'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVnamxobGtob2x1ZGpwamVzdW5qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5MzA5NDAsImV4cCI6MjA3NzUwNjk0MH0.KSIKD0QdwxO2GTXl60SiXz32y-AQlEi-CIsLBRsU_wg'
+                    'apikey': SUPABASE_KEY,
+                    'Authorization': `Bearer ${SUPABASE_KEY}`,
+                    'Content-Type': 'application/json'
                 }
             });
             
             if (response.ok) {
-                this.products = await response.json();
-                console.log('✅ Productos cargados desde Supabase:', this.products.length);
+                const data = await response.json();
+                console.log('✅ Productos cargados desde Supabase:', data.length);
+                
+                // Convertir formato Supabase a formato interno
+                this.products = data.map(item => ({
+                    id: item.id,
+                    name: item.name,
+                    category: item.category,
+                    price: item.price,
+                    type: item.type,
+                    image: item.image_url,
+                    sizeConfig: item.size_config || {
+                        type: 'customizable',
+                        defaultValue: '10cm',
+                        options: ['10cm', '15cm', '20cm', 'Personalizado']
+                    },
+                    packagingConfig: item.packaging_config || {
+                        type: 'customizable', 
+                        defaultValue: 'Caja con visor',
+                        options: ['Caja con visor', 'Bolsa de papel', 'Funda transparente']
+                    },
+                    order: item.product_order || 999
+                }));
+                
             } else {
                 throw new Error('Error cargando desde Supabase');
             }
         } catch (error) {
-            console.error('Error cargando productos:', error);
+            console.error('Error cargando productos desde Supabase:', error);
             // Fallback a localStorage
-            const savedProducts = localStorage.getItem('tejidosDelightProducts');
-            if (savedProducts) {
-                this.products = JSON.parse(savedProducts);
-            }
+            await this.loadFromLocalStorage();
         }
         
         this.updatePageContent();
     }
     
-    // El resto del código permanece igual...
+    async loadFromLocalStorage() {
+        const savedProducts = localStorage.getItem('tejidosDelightProducts');
+        if (savedProducts) {
+            this.products = JSON.parse(savedProducts);
+            console.log('📥 Productos cargados desde localStorage:', this.products.length);
+        } else {
+            console.log('⚠️ No hay productos en localStorage');
+            this.products = [];
+        }
+    }
+    
     updatePageContent() {
         this.updateCategoryPages();
     }
@@ -63,7 +97,7 @@ class ProductsLoader {
         
         const categoryProducts = this.products
             .filter(p => p.category === currentCategory)
-            .sort((a, b) => (a.product_order || 999) - (b.product_order || 999));
+            .sort((a, b) => (a.order || 999) - (b.order || 999));
         
         this.renderProducts(categoryProducts);
     }
@@ -78,13 +112,13 @@ class ProductsLoader {
         }
         
         productGrid.innerHTML = products.map(product => {
-            const sizeConfig = product.size_config || {
+            const sizeConfig = product.sizeConfig || {
                 type: 'customizable',
                 defaultValue: '10cm',
                 options: ['10cm', '15cm', '20cm', 'Personalizado']
             };
             
-            const packagingConfig = product.packaging_config || {
+            const packagingConfig = product.packagingConfig || {
                 type: 'customizable', 
                 defaultValue: 'Caja con visor',
                 options: ['Caja con visor', 'Bolsa de papel', 'Funda transparente']
@@ -92,7 +126,7 @@ class ProductsLoader {
             
             return `
                 <div class="product-card" data-category="${product.type === 'standard' ? 'estandar' : 'personalizados'}">
-                    <img src="${product.image_url}" alt="${product.name}" onerror="this.src='imagenes/personalizado.jpg'">
+                    <img src="${product.image}" alt="${product.name}" onerror="this.src='imagenes/personalizado.jpg'">
                     <h3>${product.name}</h3>
                     <p class="precio">${product.price}</p>
                     <div class="product-actions">
@@ -101,7 +135,7 @@ class ProductsLoader {
                         <button class="product-action-btn view-btn product-link" 
                            data-name="${product.name}" 
                            data-price="${product.price}" 
-                           data-img="${product.image_url}" 
+                           data-img="${product.image}" 
                            data-type="${product.type}"
                            data-size-config='${JSON.stringify(sizeConfig).replace(/'/g, "&apos;")}'
                            data-packaging-config='${JSON.stringify(packagingConfig).replace(/'/g, "&apos;")}'
@@ -115,13 +149,31 @@ class ProductsLoader {
     }
     
     setupProductInteractions() {
-        // ... (el mismo código que antes)
+        // Configurar event listeners para los botones de productos
+        document.querySelectorAll('.product-link').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (window.openModal) {
+                    window.openModal.call(link, e);
+                }
+            });
+        });
+        
+        document.querySelectorAll('.favorite-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const productCard = e.target.closest('.product-card');
+                const productName = productCard.querySelector('h3').textContent;
+                const productPrice = productCard.querySelector('.precio').textContent;
+                const productImg = productCard.querySelector('img').src;
+                
+                if (window.toggleFavorite) {
+                    window.toggleFavorite(productName, productPrice, productImg, btn);
+                }
+            });
+        });
     }
 }
-
-document.addEventListener('DOMContentLoaded', () => {
-    window.productsLoader = new ProductsLoader();
-});
 
 // Inicializar cuando el DOM esté listo
 document.addEventListener('DOMContentLoaded', () => {

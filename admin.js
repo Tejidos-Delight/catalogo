@@ -4,6 +4,18 @@ let editingProductId = null;
 let currentFilter = 'all';
 let currentSort = 'order-asc';
 
+// CONFIGURACIÓN SUPABASE - REEMPLAZA CON TUS DATOS
+// CONFIGURACIÓN SUPABASE - CON TU API KEY REAL
+const SUPABASE_CONFIG = {
+    url: 'https://egjlhlkholudjpjesunj.supabase.co',
+    key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVnamxobGtob2x1ZGpwamVzdW5qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5MzA5NDAsImV4cCI6MjA3NzUwNjk0MH0.KSIKD0QdwxO2GTXl60SiXz32y-AQlEi-CIsLBRsU_wg',
+    headers: {
+        'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVnamxobGtob2x1ZGpwamVzdW5qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5MzA5NDAsImV4cCI6MjA3NzUwNjk0MH0.KSIKD0QdwxO2GTXl60SiXz32y-AQlEi-CIsLBRsU_wg',
+        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVnamxobGtob2x1ZGpwamVzdW5qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5MzA5NDAsImV4cCI6MjA3NzUwNjk0MH0.KSIKD0QdwxO2GTXl60SiXz32y-AQlEi-CIsLBRsU_wg',
+        'Content-Type': 'application/json'
+    }
+};
+
 // Inicialización cuando el DOM está listo
 document.addEventListener('DOMContentLoaded', function() {
     loadProducts();
@@ -44,30 +56,66 @@ function setupEventListeners() {
 
 // Inicializar productos si no existen
 function initializeProducts() {
-    const savedProducts = localStorage.getItem('tejidosDelightProducts');
-    
-    if (!savedProducts || JSON.parse(savedProducts).length === 0) {
-        // Si no hay productos, cargar desde el JSON
-        loadProductsFromJSON();
-    }
+    // No necesitamos cargar desde JSON ya que usamos Supabase
+    console.log('🔄 Inicializando productos desde Supabase...');
 }
 
-// Cargar productos desde JSON
-async function loadProductsFromJSON() {
+// Cargar productos desde Supabase
+async function loadProducts() {
     try {
-        const response = await fetch('products.json');
+        console.log('📥 Cargando productos desde Supabase...');
+        
+        const response = await fetch(`${SUPABASE_CONFIG.url}/rest/v1/products?select=*&order=product_order`, {
+            headers: SUPABASE_CONFIG.headers
+        });
+        
         if (response.ok) {
             const data = await response.json();
-            products = data.products;
-            saveProducts();
-            displayProducts();
-            updateCategoryFilter();
-            showAlert('Productos cargados desde archivo JSON.', 'success');
+            console.log('✅ Productos cargados desde Supabase:', data.length);
+            
+            // Convertir de formato Supabase a formato interno
+            products = data.map(item => ({
+                id: item.id,
+                name: item.name,
+                category: item.category,
+                price: item.price,
+                type: item.type,
+                image: item.image_url,
+                sizeConfig: item.size_config || {
+                    type: 'customizable',
+                    defaultValue: '10cm',
+                    options: ['10cm', '15cm', '20cm', 'Personalizado']
+                },
+                packagingConfig: item.packaging_config || {
+                    type: 'customizable',
+                    defaultValue: 'Caja con visor',
+                    options: ['Caja con visor', 'Bolsa de papel', 'Funda transparente']
+                },
+                order: item.product_order || 999
+            }));
+            
+        } else {
+            throw new Error(`HTTP ${response.status}: Error cargando desde Supabase`);
         }
     } catch (error) {
-        console.error('Error cargando products.json:', error);
-        // Cargar productos mínimos de respaldo
-        loadDefaultProducts();
+        console.error('❌ Error cargando desde Supabase:', error);
+        // Fallback a localStorage
+        await loadFromLocalStorage();
+    }
+    
+    displayProducts();
+    updateCategoryFilter();
+}
+
+// Función para cargar desde localStorage (fallback)
+async function loadFromLocalStorage() {
+    const savedProducts = localStorage.getItem('tejidosDelightProducts');
+    if (savedProducts) {
+        products = JSON.parse(savedProducts);
+        console.log('📥 Productos cargados desde localStorage:', products.length);
+    } else {
+        console.log('⚠️ No hay productos, cargando predeterminados');
+        await loadDefaultProducts();
     }
 }
 
@@ -91,36 +139,11 @@ function togglePackagingOptions() {
     }
 }
 
-// Cargar productos desde localStorage
-function loadProducts() {
-    const savedProducts = localStorage.getItem('tejidosDelightProducts');
-    
-    if (savedProducts) {
-        products = JSON.parse(savedProducts);
-    }
-    
-    displayProducts();
-}
-
-// Actualizar filtro de categorías
-function updateCategoryFilter() {
-    const filterSelect = document.getElementById('category-filter');
-    const categories = [...new Set(products.map(p => p.category))];
-    
-    // Mantener la opción "Todas"
-    filterSelect.innerHTML = '<option value="all">Todas las categorías</option>';
-    
-    categories.forEach(category => {
-        const option = document.createElement('option');
-        option.value = category;
-        option.textContent = getCategoryName(category);
-        filterSelect.appendChild(option);
-    });
-}
-
 // Cargar productos predeterminados
-function loadDefaultProducts() {
-    products = [
+async function loadDefaultProducts() {
+    console.log('🔄 Cargando productos predeterminados...');
+    
+    const defaultProducts = [
         {
             id: '1',
             name: 'Stitch',
@@ -157,236 +180,75 @@ function loadDefaultProducts() {
                 defaultValue: 'Caja con visor',
                 options: ['Caja con visor', 'Bolsa de papel', 'Funda transparente']
             }
-        },
-        {
-            id: '3',
-            name: 'Ramo de Hello Kitty',
-            category: 'flores',
-            price: '$5.00',
-            type: 'standard',
-            image: 'imagenes/ramo-hello-kitty.jpg',
-            order: 1,
-            sizeConfig: {
-                type: 'fixed',
-                value: '25cm'
-            },
-            packagingConfig: {
-                type: 'fixed',
-                value: 'Papel de regalo'
-            }
-        },
-        {
-            id: '4',
-            name: 'Ramo Personalizado',
-            category: 'flores',
-            price: 'A cotizar',
-            type: 'custom',
-            image: 'imagenes/personalizado.jpg',
-            order: 2,
-            sizeConfig: {
-                type: 'customizable',
-                defaultValue: '30cm',
-                options: ['25cm', '30cm', '35cm', '40cm']
-            },
-            packagingConfig: {
-                type: 'customizable',
-                defaultValue: 'Papel de regalo',
-                options: ['Papel de regalo', 'Caja premium', 'Bolsa de tela']
-            }
-        },
-        {
-            id: '5',
-            name: 'Llavero Básico',
-            category: 'llaveros',
-            price: '$3.00',
-            type: 'standard',
-            image: 'imagenes/llavero-basico.jpg',
-            order: 1,
-            sizeConfig: {
-                type: 'fixed',
-                value: '5cm'
-            },
-            packagingConfig: {
-                type: 'fixed',
-                value: 'Bolsa pequeña'
-            }
-        },
-        {
-            id: '6',
-            name: 'Llavero Personalizado',
-            category: 'llaveros',
-            price: 'A cotizar',
-            type: 'custom',
-            image: 'imagenes/personalizado.jpg',
-            order: 2,
-            sizeConfig: {
-                type: 'customizable',
-                defaultValue: '6cm',
-                options: ['5cm', '6cm', '7cm', '8cm']
-            },
-            packagingConfig: {
-                type: 'customizable',
-                defaultValue: 'Bolsa pequeña',
-                options: ['Bolsa pequeña', 'Cajita', 'Sobre']
-            }
-        },
-        {
-            id: '7',
-            name: 'Pulsera Básica',
-            category: 'pulseras',
-            price: '$4.00',
-            type: 'standard',
-            image: 'imagenes/pulsera-basica.jpg',
-            order: 1,
-            sizeConfig: {
-                type: 'fixed',
-                value: 'Ajustable'
-            },
-            packagingConfig: {
-                type: 'fixed',
-                value: 'Bolsa de organza'
-            }
-        },
-        {
-            id: '8',
-            name: 'Pulsera Personalizada',
-            category: 'pulseras',
-            price: 'A cotizar',
-            type: 'custom',
-            image: 'imagenes/personalizado.jpg',
-            order: 2,
-            sizeConfig: {
-                type: 'customizable',
-                defaultValue: '17cm',
-                options: ['15cm', '17cm', '19cm', '21cm']
-            },
-            packagingConfig: {
-                type: 'customizable',
-                defaultValue: 'Bolsa de organza',
-                options: ['Bolsa de organza', 'Cajita', 'Display']
-            }
-        },
-        {
-            id: '9',
-            name: 'Bolsa Básica',
-            category: 'bolsas',
-            price: '$8.00',
-            type: 'standard',
-            image: 'imagenes/bolsa-basica.jpg',
-            order: 1,
-            sizeConfig: {
-                type: 'fixed',
-                value: '10cm'
-            },
-            packagingConfig: {
-                type: 'customizable',
-                defaultValue: 'Caja con visor',
-                options: ['Caja con visor', 'Bolsa de papel', 'Funda transparente']
-            }
-        },
-        {
-            id: '10',
-            name: 'Bolsa Personalizada',
-            category: 'bolsas',
-            price: 'A cotizar',
-            type: 'custom',
-            image: 'imagenes/personalizado.jpg',
-            order: 2,
-            sizeConfig: {
-                type: 'customizable',
-                defaultValue: '15cm',
-                options: ['10cm', '15cm', '20cm', '25cm']
-            },
-            packagingConfig: {
-                type: 'customizable',
-                defaultValue: 'Caja con visor',
-                options: ['Caja con visor', 'Bolsa de papel', 'Funda transparente']
-            }
-        },
-        {
-            id: '11',
-            name: 'Maceta Simple',
-            category: 'macetas',
-            price: '$6.00',
-            type: 'standard',
-            image: 'imagenes/maceta-simple.jpg',
-            order: 1,
-            sizeConfig: {
-                type: 'fixed',
-                value: '10cm'
-            },
-            packagingConfig: {
-                type: 'customizable',
-                defaultValue: 'Caja con visor',
-                options: ['Caja con visor', 'Bolsa de papel', 'Funda transparente']
-            }
-        },
-        {
-            id: '12',
-            name: 'Maceta Personalizada',
-            category: 'macetas',
-            price: 'A cotizar',
-            type: 'custom',
-            image: 'imagenes/personalizado.jpg',
-            order: 2,
-            sizeConfig: {
-                type: 'customizable',
-                defaultValue: '15cm',
-                options: ['10cm', '15cm', '20cm', '25cm']
-            },
-            packagingConfig: {
-                type: 'customizable',
-                defaultValue: 'Caja con visor',
-                options: ['Caja con visor', 'Bolsa de papel', 'Funda transparente']
-            }
         }
     ];
     
-    saveProducts();
-    displayProducts();
-    updateCategoryFilter();
-}
-
-// En admin.js - reemplazar saveProducts()
-async function saveProducts() {
+    products = defaultProducts;
+    
     try {
-        // Preparar productos para Supabase
-        const productsForDB = products.map(product => ({
-            id: product.id,
-            name: product.name,
-            category: product.category,
-            price: product.price,
-            type: product.type,
-            image_url: product.image,
-            size_config: product.sizeConfig,
-            packaging_config: product.packagingConfig,
-            product_order: product.order
-        }));
-
-        // Guardar en Supabase
-        const response = await fetch('https://tu-proyecto.supabase.co/rest/v1/products', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'apikey': 'tu-clave-publica-anon',
-                'Authorization': 'Bearer tu-clave-publica-anon',
-                'Prefer': 'resolution=merge-duplicates'
-            },
-            body: JSON.stringify(productsForDB)
-        });
-
-        if (response.ok) {
-            showAlert('✅ Productos guardados en base de datos', 'success');
-        } else {
-            throw new Error('Error en respuesta de Supabase');
-        }
+        // Intentar guardar los productos predeterminados en Supabase
+        await saveProductsToSupabase();
     } catch (error) {
-        console.error('Error guardando en Supabase:', error);
-        // Fallback a localStorage
+        console.error('❌ Error guardando productos predeterminados en Supabase:', error);
+        // Guardar solo en localStorage
         localStorage.setItem('tejidosDelightProducts', JSON.stringify(products));
-        showAlert('✅ Productos guardados en localStorage (fallback)', 'success');
     }
 }
+
+// Guardar productos en Supabase
+async function saveProductsToSupabase() {
+    console.log('💾 Guardando productos en Supabase...');
+    
+    // Preparar productos para Supabase
+    const productsForDB = products.map(product => ({
+        id: product.id,
+        name: product.name,
+        category: product.category,
+        price: product.price,
+        type: product.type,
+        image_url: product.image,
+        size_config: product.sizeConfig,
+        packaging_config: product.packagingConfig,
+        product_order: product.order || 999
+    }));
+
+    // Guardar en Supabase usando UPSERT (inserta o actualiza)
+    const response = await fetch(`${SUPABASE_CONFIG.url}/rest/v1/products`, {
+        method: 'POST',
+        headers: {
+            ...SUPABASE_CONFIG.headers,
+            'Prefer': 'resolution=merge-duplicates'
+        },
+        body: JSON.stringify(productsForDB)
+    });
+
+    if (response.ok) {
+        console.log('✅ Productos guardados en Supabase');
+        // También guardar en localStorage como backup
+        localStorage.setItem('tejidosDelightProducts', JSON.stringify(products));
+        return true;
+    } else {
+        const errorText = await response.text();
+        throw new Error(`Supabase error: ${errorText}`);
+    }
+}
+
+// Actualizar filtro de categorías
+function updateCategoryFilter() {
+    const filterSelect = document.getElementById('category-filter');
+    const categories = [...new Set(products.map(p => p.category))];
+    
+    // Mantener la opción "Todas"
+    filterSelect.innerHTML = '<option value="all">Todas las categorías</option>';
+    
+    categories.forEach(category => {
+        const option = document.createElement('option');
+        option.value = category;
+        option.textContent = getCategoryName(category);
+        filterSelect.appendChild(option);
+    });
+}
+
 // Mostrar productos en la interfaz
 function displayProducts(filteredProducts = null) {
     let productsToDisplay = filteredProducts || products;
@@ -487,7 +349,7 @@ function sortProducts(products, sortType) {
 }
 
 // Mover producto hacia arriba
-function moveProductUp(productId) {
+async function moveProductUp(productId) {
     const categoryProducts = products.filter(p => 
         currentFilter === 'all' ? true : p.category === currentFilter
     );
@@ -502,13 +364,13 @@ function moveProductUp(productId) {
         product.order = previousProduct.order;
         previousProduct.order = tempOrder;
         
-        saveProducts();
+        await saveProducts();
         displayProducts();
     }
 }
 
 // Mover producto hacia abajo
-function moveProductDown(productId) {
+async function moveProductDown(productId) {
     const categoryProducts = products.filter(p => 
         currentFilter === 'all' ? true : p.category === currentFilter
     );
@@ -523,7 +385,7 @@ function moveProductDown(productId) {
         product.order = nextProduct.order;
         nextProduct.order = tempOrder;
         
-        saveProducts();
+        await saveProducts();
         displayProducts();
     }
 }
@@ -595,7 +457,7 @@ function previewImage(event) {
 }
 
 // Guardar producto (nuevo o editado)
-function saveProduct(event) {
+async function saveProduct(event) {
     event.preventDefault();
     
     const productId = document.getElementById('product-id').value;
@@ -709,9 +571,22 @@ function saveProduct(event) {
         showAlert('Producto agregado correctamente.', 'success');
     }
     
-    saveProducts();
+    await saveProducts();
     resetForm();
     showSection('products');
+}
+
+// Guardar productos (función principal)
+async function saveProducts() {
+    try {
+        await saveProductsToSupabase();
+        showAlert('✅ Productos guardados en base de datos', 'success');
+    } catch (error) {
+        console.error('❌ Error guardando en Supabase:', error);
+        // Fallback a localStorage
+        localStorage.setItem('tejidosDelightProducts', JSON.stringify(products));
+        showAlert('✅ Productos guardados en localStorage (fallback)', 'success');
+    }
 }
 
 // Generar ID único
@@ -773,12 +648,35 @@ function editProduct(id) {
 }
 
 // Eliminar producto
-function deleteProduct(id) {
+async function deleteProduct(id) {
     if (confirm('¿Estás seguro de que quieres eliminar este producto?')) {
-        products = products.filter(p => p.id !== id);
-        saveProducts();
-        displayProducts();
-        showAlert('Producto eliminado correctamente.', 'success');
+        try {
+            // Eliminar de Supabase
+            const response = await fetch(`${SUPABASE_CONFIG.url}/rest/v1/products?id=eq.${id}`, {
+                method: 'DELETE',
+                headers: SUPABASE_CONFIG.headers
+            });
+
+            if (response.ok) {
+                // Eliminar del array local
+                products = products.filter(p => p.id !== id);
+                
+                // Actualizar localStorage
+                localStorage.setItem('tejidosDelightProducts', JSON.stringify(products));
+                
+                displayProducts();
+                showAlert('Producto eliminado correctamente.', 'success');
+            } else {
+                throw new Error('Error eliminando de Supabase');
+            }
+        } catch (error) {
+            console.error('Error eliminando producto:', error);
+            // Fallback: eliminar solo localmente
+            products = products.filter(p => p.id !== id);
+            localStorage.setItem('tejidosDelightProducts', JSON.stringify(products));
+            displayProducts();
+            showAlert('Producto eliminado (solo localmente)', 'success');
+        }
     }
 }
 
@@ -826,7 +724,7 @@ function exportProducts() {
     linkElement.setAttribute('download', exportFileDefaultName);
     linkElement.click();
     
-    showAlert('Productos exportados correctamente. Reemplaza el contenido de products.json con este archivo para actualizar GitHub Pages.', 'success');
+    showAlert('Productos exportados correctamente.', 'success');
 }
 
 // Importar productos desde JSON
@@ -849,7 +747,7 @@ function importProducts() {
             if (Array.isArray(importedProducts)) {
                 if (confirm('¿Estás seguro de que quieres importar estos productos? Se reemplazarán todos los productos actuales.')) {
                     products = importedProducts;
-                    saveProducts();
+                    saveProducts(); // Esto guardará en Supabase
                     displayProducts();
                     showAlert('Productos importados correctamente.', 'success');
                     fileInput.value = '';
@@ -866,9 +764,10 @@ function importProducts() {
 }
 
 // Restablecer a valores predeterminados
-function resetToDefault() {
+async function resetToDefault() {
     if (confirm('¿Estás seguro de que quieres restablecer todos los productos a los valores predeterminados? Se perderán todos los productos actuales.')) {
-        loadDefaultProducts();
+        await loadDefaultProducts();
+        displayProducts();
         showAlert('Productos restablecidos a valores predeterminados.', 'success');
     }
 }
