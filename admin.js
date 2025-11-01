@@ -1,8 +1,8 @@
 // =================================================================
-// ARCHIVO admin.js REESTRUCTURADO (VERSIÓN 3 - CORREGIDA)
+// ARCHIVO admin.js (VERSIÓN 4 - CON SUPABASE STORAGE)
 // =================================================================
 
-// 1. Importar la función de Supabase (¡LA LÍNEA MÁS IMPORTANTE!)
+// 1. Importar la función de Supabase
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 
 // 2. Configuración del Cliente Supabase
@@ -17,6 +17,7 @@ let products = [];
 let editingProductId = null;
 let currentFilter = 'all';
 let currentSort = 'order-asc';
+const BUCKET_NAME = 'product-images'; // El nombre de nuestro balde
 
 // =================================================================
 // INICIALIZACIÓN Y AUTENTICACIÓN
@@ -27,58 +28,38 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 async function checkUserSession() {
-    // Usamos el cliente 'sbClient'
     const { data: { session } } = await sbClient.auth.getSession();
 
     if (session) {
-        // El usuario SÍ tiene sesión
         console.log('Sesión activa:', session.user.email);
-        // Mostrar el panel de admin
         document.getElementById('admin-panel').style.display = 'block';
-        
-        // Cargar todo lo demás
         loadProducts();
         setupEventListeners();
         updateCategoryFilter();
-
     } else {
-        // El usuario NO tiene sesión
         console.log('No hay sesión, redirigiendo a login...');
-        // Redirigir a la página de login
-        window.location.href = 'acceso-seguro-789.html'; // Asegúrate que este sea el nombre de tu login.html
+        window.location.href = 'acceso-seguro-789.html';
     }
 }
 
 // Configurar event listeners
 function setupEventListeners() {
-    // Formulario de producto
     document.getElementById('product-form').addEventListener('submit', saveProduct);
-    
-    // Vista previa de imagen
     document.getElementById('product-image').addEventListener('change', previewImage);
-    
-    // Filtros y ordenamiento
     document.getElementById('category-filter').addEventListener('change', function() {
         currentFilter = this.value;
         displayProducts();
     });
-    
     document.getElementById('sort-products').addEventListener('change', function() {
         currentSort = this.value;
         displayProducts();
     });
-
-    // Configuración de tamaño
     document.querySelectorAll('input[name="size-type"]').forEach(radio => {
         radio.addEventListener('change', toggleSizeOptions);
     });
-
-    // Configuración de empaque
     document.querySelectorAll('input[name="packaging-type"]').forEach(radio => {
         radio.addEventListener('change', togglePackagingOptions);
     });
-
-    // Botón de Salir
     const logoutBtn = document.getElementById('logout-btn');
     if (logoutBtn) {
         logoutBtn.addEventListener('click', async () => {
@@ -86,116 +67,200 @@ function setupEventListeners() {
             if (error) {
                 console.error('Error al salir:', error);
             } else {
-                // Redirigir a login al salir
-                window.location.href = 'acceso-seguro-789.html'; // Asegúrate que este sea el nombre de tu login.html
+                window.location.href = 'acceso-seguro-789.html';
             }
         });
     }
+    
+    // Listeners para los botones globales (delegación de eventos)
+    // Esto es más eficiente que añadir un listener a CADA botón
+    const productsContainer = document.getElementById('products-container');
+    productsContainer.addEventListener('click', function(event) {
+        const target = event.target;
+        if (target.classList.contains('btn-move-up')) {
+            moveProductUp(target.dataset.id);
+        } else if (target.classList.contains('btn-move-down')) {
+            moveProductDown(target.dataset.id);
+        } else if (target.classList.contains('btn-edit')) {
+            editProduct(target.dataset.id);
+        } else if (target.classList.contains('btn-delete')) {
+            deleteProduct(target.dataset.id);
+        }
+    });
+
+    // Listeners de los botones de navegación del panel
+    document.querySelector('button[onclick="showSection(\'products\')"]').addEventListener('click', () => showSection('products'));
+    document.querySelector('button[onclick="showSection(\'add-product\')"]').addEventListener('click', () => {
+        resetForm(); // Limpiar formulario al ir a "Agregar Producto"
+        showSection('add-product');
+    });
+    document.querySelector('button[onclick="showSection(\'export\')"]').addEventListener('click', () => showSection('export'));
+    document.querySelector('button[onclick="window.location.href=\'index.html\'"]').addEventListener('click', () => window.location.href='index.html');
+    document.getElementById('cancel-btn').addEventListener('click', resetForm);
+    document.getElementById('search-products').addEventListener('keyup', filterProducts);
+
+    // Listeners de Importar/Exportar
+    document.querySelector('button[onclick="exportProducts()"]').addEventListener('click', exportProducts);
+    document.querySelector('button[onclick="importProducts()"]').addEventListener('click', importProducts);
+    document.querySelector('button[onclick="resetToDefault()"]').addEventListener('click', resetToDefault);
 }
 
 // =================================================================
-// LÓGICA DE PRODUCTOS (Ahora usando 'sbClient')
+// LÓGICA DE PRODUCTOS (¡CON UPLOAD!)
 // =================================================================
 
 // Cargar productos desde Supabase
 async function loadProducts() {
     try {
         console.log('📥 Cargando productos desde Supabase...');
-        
         const { data, error } = await sbClient
             .from('products')
             .select('*')
             .order('product_order', { ascending: true });
-
         if (error) throw error; 
-        
         console.log('✅ Productos cargados:', data.length);
-        
         products = data.map(item => ({
             id: item.id,
             name: item.name,
             category: item.category,
             price: item.price,
             type: item.type,
-            image: item.image_url,
+            image: item.image_url, // Este es el URL público del Storage
             sizeConfig: item.size_config || { type: 'customizable', defaultValue: '10cm', options: ['10cm', '15cm', '20cm'] },
             packagingConfig: item.packaging_config || { type: 'customizable', defaultValue: 'Caja con visor', options: ['Caja con visor', 'Bolsa de papel'] },
             order: item.product_order || 999
         }));
-            
     } catch (error) {
         console.error('❌ Error cargando desde Supabase:', error);
         showAlert(`Error cargando productos: ${error.message}`, 'error');
     }
-    
     displayProducts();
     updateCategoryFilter();
 }
 
-// Guardar producto (nuevo o editado)
+// --- FUNCIÓN MODIFICADA ---
+// Ahora solo muestra el preview, no guarda el Base64
+function previewImage(event) {
+    const file = event.target.files[0];
+    const preview = document.getElementById('image-preview');
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            preview.src = e.target.result;
+            preview.style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+        // --- ELIMINADO --- Ya no guardamos el Base64 en el input oculto
+        // document.getElementById('product-image-url').value = e.target.result;
+    } else {
+        preview.style.display = 'none';
+    }
+}
+
+// --- FUNCIÓN MODIFICADA ---
+// Lógica de subida de archivos
 async function saveProduct(event) {
     event.preventDefault();
-    
-    const productId = document.getElementById('product-id').value;
-    const name = document.getElementById('product-name').value;
-    const category = document.getElementById('product-category').value;
-    const price = document.getElementById('product-price').value;
-    const type = document.getElementById('product-type').value;
-    const imageUrl = document.getElementById('product-image-url').value;
-    
-    const sizeType = document.querySelector('input[name="size-type"]:checked').value;
-    let sizeConfig = {};
-    if (sizeType === 'fixed') { sizeConfig = { type: 'fixed', value: document.getElementById('fixed-size').value || '10cm' }; } 
-    else { const sizeOptions = document.getElementById('size-options').value.split(',').map(opt => opt.trim()).filter(opt => opt !== ''); sizeConfig = { type: 'customizable', defaultValue: document.getElementById('default-size').value || '10cm', options: sizeOptions.length > 0 ? sizeOptions : ['10cm', '15cm', '20cm'] }; }
-    
-    const packagingType = document.querySelector('input[name="packaging-type"]:checked').value;
-    let packagingConfig = {};
-    if (packagingType === 'fixed') { packagingConfig = { type: 'fixed', value: document.getElementById('fixed-packaging').value || 'Caja con visor' }; }
-    else { const packagingOptions = document.getElementById('packaging-options').value.split(',').map(opt => opt.trim()).filter(opt => opt !== ''); packagingConfig = { type: 'customizable', defaultValue: document.getElementById('default-packaging').value || 'Caja con visor', options: packagingOptions.length > 0 ? packagingOptions : ['Caja con visor', 'Bolsa de papel'] }; }
-
-    if (!name || !category || !price || !type) { showAlert('Por favor completa todos los campos obligatorios.', 'error'); return; }
-
-    const productData = {
-        name: name,
-        category: category,
-        price: price,
-        type: type,
-        image_url: imageUrl || 'imagenes/personalizado.jpg',
-        size_config: sizeConfig,
-        packaging_config: packagingConfig
-    };
+    const submitButton = document.getElementById('submit-btn');
+    submitButton.disabled = true;
+    submitButton.textContent = 'Guardando...';
 
     try {
+        const productId = document.getElementById('product-id').value;
+        const name = document.getElementById('product-name').value;
+        const category = document.getElementById('product-category').value;
+        const price = document.getElementById('product-price').value;
+        const type = document.getElementById('product-type').value;
+        
+        // 1. Obtener la URL de la imagen existente (si estamos editando)
+        let imageUrl = document.getElementById('product-image-url').value;
+        
+        // 2. Obtener el archivo NUEVO (si el usuario seleccionó uno)
+        const fileInput = document.getElementById('product-image');
+        const file = fileInput.files[0];
+
+        // 3. Lógica de subida de imagen
+        if (file) {
+            console.log('Subiendo nueva imagen...');
+            const fileName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`; // Nombre único y limpio
+
+            // Subir el archivo al bucket
+            const { data: uploadData, error: uploadError } = await sbClient.storage
+                .from(BUCKET_NAME)
+                .upload(fileName, file, {
+                    cacheControl: '3600', // 1 hora de caché
+                    upsert: false // No sobrescribir
+                });
+
+            if (uploadError) {
+                throw new Error(`Error subiendo imagen: ${uploadError.message}`);
+            }
+
+            // 4. Obtener el URL público de la imagen recién subida
+            const { data: publicUrlData } = sbClient.storage
+                .from(BUCKET_NAME)
+                .getPublicUrl(uploadData.path);
+
+            imageUrl = publicUrlData.publicUrl;
+            console.log('Nueva URL de imagen:', imageUrl);
+            
+            // (Opcional: Borrar la imagen antigua si estamos editando)
+            const oldImageUrl = document.getElementById('product-image-url').value;
+            if (productId && oldImageUrl && oldImageUrl.includes(BUCKET_NAME)) {
+                const oldFileName = oldImageUrl.split('/').pop();
+                console.log('Borrando imagen antigua:', oldFileName);
+                await sbClient.storage.from(BUCKET_NAME).remove([oldFileName]);
+            }
+
+        } else if (!imageUrl) {
+            // No hay archivo nuevo Y no hay imagen existente
+            imageUrl = 'imagenes/personalizado.jpg'; // Asignar imagen por defecto
+        }
+
+        // 5. Preparar el resto de los datos del producto
+        const sizeType = document.querySelector('input[name="size-type"]:checked').value;
+        let sizeConfig = {};
+        if (sizeType === 'fixed') { sizeConfig = { type: 'fixed', value: document.getElementById('fixed-size').value || '10cm' }; } 
+        else { const sizeOptions = document.getElementById('size-options').value.split(',').map(opt => opt.trim()).filter(opt => opt !== ''); sizeConfig = { type: 'customizable', defaultValue: document.getElementById('default-size').value || '10cm', options: sizeOptions.length > 0 ? sizeOptions : ['10cm', '15cm', '20cm'] }; }
+        
+        const packagingType = document.querySelector('input[name="packaging-type"]:checked').value;
+        let packagingConfig = {};
+        if (packagingType === 'fixed') { packagingConfig = { type: 'fixed', value: document.getElementById('fixed-packaging').value || 'Caja con visor' }; }
+        else { const packagingOptions = document.getElementById('packaging-options').value.split(',').map(opt => opt.trim()).filter(opt => opt !== ''); packagingConfig = { type: 'customizable', defaultValue: document.getElementById('default-packaging').value || 'Caja con visor', options: packagingOptions.length > 0 ? packagingOptions : ['Caja con visor', 'Bolsa de papel'] }; }
+
+        if (!name || !category || !price || !type) {
+            throw new Error('Por favor completa todos los campos obligatorios.');
+        }
+
+        const productData = {
+            name: name,
+            category: category,
+            price: price,
+            type: type,
+            image_url: imageUrl, // 6. Guardar el URL del Storage
+            size_config: sizeConfig,
+            packaging_config: packagingConfig
+        };
+
+        // 7. Guardar en la base de datos (igual que antes)
         if (productId) {
-            // --- EDITANDO ---
             const productIndex = products.findIndex(p => p.id === productId);
             productData.product_order = products[productIndex]?.order || 999;
 
-            const { error } = await sbClient
-                .from('products')
-                .update(productData)
-                .eq('id', productId); 
-
+            const { error } = await sbClient.from('products').update(productData).eq('id', productId); 
             if (error) throw error;
             
             products[productIndex] = { ...products[productIndex], ...productData, image: productData.image_url };
             showAlert('Producto actualizado correctamente.', 'success');
-            
         } else {
-            // --- CREANDO ---
             const categoryProducts = products.filter(p => p.category === category);
             const maxOrder = categoryProducts.length > 0 ? Math.max(...categoryProducts.map(p => p.order || 0)) : 0;
             productData.product_order = maxOrder + 1;
             
-            const { data, error } = await sbClient
-                .from('products')
-                .insert(productData)
-                .select(); 
-
+            const { data, error } = await sbClient.from('products').insert(productData).select(); 
             if (error) throw error;
 
             const newProduct = data[0]; 
-            
             products.push({
                 id: newProduct.id,
                 name: newProduct.name,
@@ -218,20 +283,36 @@ async function saveProduct(event) {
     } catch (error) {
         console.error('❌ Error guardando en Supabase:', error);
         showAlert(`Error: ${error.message}`, 'error');
+    } finally {
+        // Reactivar el botón
+        submitButton.disabled = false;
+        submitButton.textContent = 'Guardar Producto';
     }
 }
 
-// Eliminar producto
+// Eliminar producto (¡y su imagen!)
 async function deleteProduct(id) {
     if (confirm('¿Estás seguro de que quieres eliminar este producto?')) {
         try {
-            const { error } = await sbClient
-                .from('products')
-                .delete()
-                .eq('id', id);
+            // 1. Encontrar el producto para obtener la URL de la imagen
+            const product = products.find(p => p.id === id);
+            
+            // 2. Eliminar de la base de datos
+            const { error: dbError } = await sbClient.from('products').delete().eq('id', id);
+            if (dbError) throw dbError;
 
-            if (error) throw error;
+            // 3. Eliminar la imagen del Storage (si existe y es del storage)
+            if (product && product.image && product.image.includes(BUCKET_NAME)) {
+                const fileName = product.image.split('/').pop();
+                console.log('Borrando imagen:', fileName);
+                const { error: storageError } = await sbClient.storage.from(BUCKET_NAME).remove([fileName]);
+                if (storageError) {
+                    // No detener la ejecución, solo registrar el error
+                    console.warn('No se pudo borrar la imagen antigua:', storageError.message);
+                }
+            }
 
+            // 4. Eliminar del array local
             products = products.filter(p => p.id !== id);
             localStorage.setItem('tejidosDelightProducts', JSON.stringify(products));
             displayProducts();
@@ -245,10 +326,8 @@ async function deleteProduct(id) {
 }
 
 // =================================================================
-// FUNCIONES DE UI (Sin cambios)
+// FUNCIONES DE UI (Modificadas)
 // =================================================================
-// (El resto de tus funciones de UI permanecen exactamente iguales)
-// ...
 
 function displayProducts(filteredProducts = null) {
     let productsToDisplay = filteredProducts || products;
@@ -258,7 +337,6 @@ function displayProducts(filteredProducts = null) {
     }
     
     productsToDisplay = sortProducts(productsToDisplay, currentSort);
-    
     const container = document.getElementById('products-container');
     
     if (productsToDisplay.length === 0) {
@@ -266,7 +344,11 @@ function displayProducts(filteredProducts = null) {
         return;
     }
     
-    container.innerHTML = productsToDisplay.map(product => `
+    // Ahora los botones usan data-id para la delegación de eventos
+    container.innerHTML = productsToDisplay.map((product, index) => {
+        const isFirst = index === 0;
+        const isLast = index === productsToDisplay.length - 1;
+        return `
         <div class="admin-product-card" data-product-id="${product.id}">
             <img src="${product.image}" alt="${product.name}" onerror="this.src='imagenes/personalizado.jpg'">
             <h3>${product.name}</h3>
@@ -277,13 +359,13 @@ function displayProducts(filteredProducts = null) {
             <p><strong>Empaque:</strong> ${getPackagingDisplay(product.packagingConfig)}</p>
             <p><strong>Orden:</strong> ${product.order || 'No definido'}</p>
             <div class="admin-product-actions">
-                <button class="btn-move-up" onclick="moveProductUp('${product.id}')" ${productsToDisplay.indexOf(product) === 0 ? 'disabled' : ''}>⬆</button>
-                <button class="btn-move-down" onclick="moveProductDown('${product.id}')" ${productsToDisplay.indexOf(product) === productsToDisplay.length - 1 ? 'disabled' : ''}>⬇</button>
-                <button class="btn-edit" onclick="editProduct('${product.id}')">Editar</button>
-                <button class="btn-delete" onclick="deleteProduct('${product.id}')">Eliminar</button>
+                <button class="btn-move-up" data-id="${product.id}" ${isFirst ? 'disabled' : ''}>⬆</button>
+                <button class="btn-move-down" data-id="${product.id}" ${isLast ? 'disabled' : ''}>⬇</button>
+                <button class="btn-edit" data-id="${product.id}">Editar</button>
+                <button class="btn-delete" data-id="${product.id}">Eliminar</button>
             </div>
         </div>
-    `).join('');
+    `}).join('');
 }
 
 
@@ -344,7 +426,7 @@ async function moveProductUp(productId) {
         const tempOrder = product.order;
         product.order = previousProduct.order;
         previousProduct.order = tempOrder;
-        await saveProducts(); // Esta función ahora solo guarda todo el array
+        await saveProducts(); // Sincroniza todos los cambios de orden
         displayProducts();
     }
 }
@@ -358,7 +440,7 @@ async function moveProductDown(productId) {
         const tempOrder = product.order;
         product.order = nextProduct.order;
         nextProduct.order = tempOrder;
-        await saveProducts(); // Esta función ahora solo guarda todo el array
+        await saveProducts(); // Sincroniza todos los cambios de orden
         displayProducts();
     }
 }
@@ -407,23 +489,6 @@ function showSection(sectionId) {
     }
 }
 
-function previewImage(event) {
-    const file = event.target.files[0];
-    const preview = document.getElementById('image-preview');
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            preview.src = e.target.result;
-            preview.style.display = 'block';
-            document.getElementById('product-image-url').value = e.target.result;
-        };
-        reader.readAsDataURL(file);
-    } else {
-        preview.style.display = 'none';
-        document.getElementById('product-image-url').value = '';
-    }
-}
-
 function editProduct(id) {
     const product = products.find(p => p.id === id);
     if (product) {
@@ -458,6 +523,7 @@ function editProduct(id) {
         if (product.image) {
             preview.src = product.image;
             preview.style.display = 'block';
+            // --- MODIFICADO --- Guardamos el URL actual en el input oculto
             document.getElementById('product-image-url').value = product.image;
         }
         
@@ -478,6 +544,10 @@ function resetForm() {
     document.getElementById('cancel-btn').style.display = 'none';
     editingProductId = null;
     
+    // --- MODIFICADO --- Limpiar el input de archivo y el de URL
+    document.getElementById('product-image').value = null;
+    document.getElementById('product-image-url').value = '';
+
     document.querySelector('input[name="size-type"][value="fixed"]').checked = true;
     document.getElementById('fixed-size').value = '10cm';
     toggleSizeOptions.call(document.querySelector('input[name="size-type"]:checked'));
@@ -489,10 +559,7 @@ function resetForm() {
 
 function showAlert(message, type) {
     const alert = document.getElementById('alert');
-    if (!alert) { // Asegurarse de que el elemento 'alert' exista
-        console.error('Elemento #alert no encontrado');
-        return;
-    }
+    if (!alert) { console.error('Elemento #alert no encontrado'); return; }
     alert.textContent = message;
     alert.className = `alert alert-${type}`;
     alert.style.display = 'block';
@@ -522,7 +589,7 @@ function importProducts() {
             if (Array.isArray(importedProducts)) {
                 if (confirm('¿Estás seguro de que quieres importar estos productos? Se reemplazarán todos los productos actuales.')) {
                     products = importedProducts;
-                    saveProducts(); // Esto guardará en Supabase
+                    saveProducts();
                     displayProducts();
                     showAlert('Productos importados correctamente.', 'success');
                     fileInput.value = '';
@@ -536,7 +603,7 @@ function importProducts() {
 async function resetToDefault() {
     if (confirm('¿Estás seguro de que quieres restablecer todos los productos a los valores predeterminados? Se perderán todos los productos actuales.')) {
         products = [];
-        await saveProducts(); // Guarda el array vacío
+        await saveProducts();
         displayProducts();
         showAlert('Productos restablecidos.', 'success');
     }
