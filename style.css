@@ -1504,3 +1504,28 @@ footer p {
 .product-card:nth-child(4) { animation-delay: 0.4s; }
 .product-card:nth-child(5) { animation-delay: 0.5s; }
 .product-card:nth-child(6) { animation-delay: 0.6s; }
+
+/* ==================================================== */
+/* EFECTO ZOOM (PAN-AND-ZOOM) EN IMAGEN DEL MODAL */
+/* ==================================================== */
+
+/* 1. El contenedor (para la restricción) */
+/* Le decimos que "recorte" cualquier cosa que se salga de sus bordes */
+.modal-left {
+    overflow: hidden;
+    border-radius: 8px; 
+    cursor: zoom-in; /* Opcional: cambia el cursor */
+}
+
+/* 2. La imagen (para la animación) */
+.modal-left img#modal-img {
+    /* Transición suave para el zoom y el paneo */
+    transition: transform 0.2s ease-out;
+    
+    /* Nos aseguramos que empiece centrada por defecto */
+    transform-origin: center center;
+    transform: scale(1);
+    
+    /* Evita que los eventos del mouse se "peguen" a la imagen */
+    pointer-events: none; 
+}

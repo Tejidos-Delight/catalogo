@@ -78,6 +78,8 @@ document.addEventListener("DOMContentLoaded", () => {
         setupEventListeners();
         setupPaymentMethods();
         setupLogoAnimation();
+
+        setupImageZoom();
     }
     
     // --- Configurar todos los event listeners ---
@@ -237,6 +239,44 @@ document.addEventListener("DOMContentLoaded", () => {
                 }, 300);
             });
         }
+    }
+
+    // --- NUEVA FUNCIÓN PARA ZOOM CON MOUSE ---
+    function setupImageZoom() {
+        const zoomContainer = document.querySelector('.modal-left');
+        const zoomImage = document.getElementById('modal-img');
+
+        if (!zoomContainer || !zoomImage) {
+            // Si no están los elementos, no hacer nada
+            return;
+        }
+
+        // 1. Cuando el mouse se mueve sobre el contenedor
+        zoomContainer.addEventListener('mousemove', (e) => {
+            const rect = zoomContainer.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            // Convertir la posición del mouse en porcentaje (0% a 100%)
+            const xPercent = (x / rect.width) * 100;
+            const yPercent = (y / rect.height) * 100;
+
+            // Mover el "origen" del zoom a la posición del mouse
+            zoomImage.style.transformOrigin = `${xPercent}% ${yPercent}%`;
+        });
+
+        // 2. Cuando el mouse entra en el contenedor
+        zoomContainer.addEventListener('mouseenter', () => {
+            // Aplicar el zoom x2 (puedes cambiar este '2' por '1.5' o '2.5')
+            zoomImage.style.transform = 'scale(1.7)';
+        });
+
+        // 3. Cuando el mouse sale del contenedor
+        zoomContainer.addEventListener('mouseleave', () => {
+            // Quitar el zoom y volver a centrar
+            zoomImage.style.transform = 'scale(1)';
+            zoomImage.style.transformOrigin = 'center center';
+        });
     }
 
     // --- Funciones de cantidad ---
