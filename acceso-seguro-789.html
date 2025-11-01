@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Admin Tejidos Delight</title>
+    <style>
+        body { font-family: 'Josefin Sans', sans-serif; display: grid; place-items: center; min-height: 100vh; background-color: #fdfaf6; }
+        form { background: #fff; border: 1px solid #eee; border-radius: 12px; padding: 25px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        h2 { text-align: center; color: #5d4037; }
+        div { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: 600; }
+        input { width: 300px; padding: 10px; border: 1px solid #ddd; border-radius: 6px; }
+        button { width: 100%; padding: 12px; background: #d9534f; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 1em; }
+        button:hover { background: #c9302c; }
+        #alert { display: none; margin-top: 15px; padding: 10px; border-radius: 6px; }
+        .alert-error { background: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+
+    <form id="login-form">
+        <h2>Acceso Administrador</h2>
+        <div>
+            <label for="email">Email</label>
+            <input type="email" id="email" required>
+        </div>
+        <div>
+            <label for="password">Contraseña</label>
+            <input type="password" id="password" required>
+        </div>
+        <button type="submit">Ingresar</button>
+        <div id="alert" class="alert-error"></div>
+    </form>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script type="module">
+        // 1. Importar la función necesaria
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+        // 2. Configurar el cliente
+        const SUPABASE_URL = 'https://egjlhlkholudjpjesunj.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVnamxobGtob2x1ZGpwamVzdW5qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5MzA5NDAsImV4cCI6MjA3NzUwNjk0MH0.KSIKD0QdwxO2GTXl60SiXz32y-AQlEi-CIsLBRsU_wg';
+        
+        // 3. Crear el cliente
+        const sbClient = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // 4. Manejar el inicio de sesión
+        const loginForm = document.getElementById('login-form');
+        const alertBox = document.getElementById('alert');
+
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault(); // Esto ahora SÍ se ejecutará
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            // 5. Intentar iniciar sesión
+            const { data, error } = await sbClient.auth.signInWithPassword({
+                email: email,
+                password: password,
+            });
+
+            if (error) {
+                alertBox.textContent = 'Error: ' + error.message;
+                alertBox.style.display = 'block';
+            } else {
+                // 6. ¡Éxito! Redirigir al panel de admin
+                console.log('Inicio de sesión exitoso:', data.user);
+                window.location.href = 'gestion-tienda-456.html'; // Asegúrate que este sea el nombre
+            }
+        });
+    </script>
+
+</body>
+</html>
