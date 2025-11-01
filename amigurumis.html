@@ -67,8 +67,16 @@
                 <p id="modal-price" class="precio">$0.00</p>
                 <hr>
                 <div id="form-size-standard" class="modal-form-group">
-                    <label>Tamaño:</label>
-                    <!-- Las opciones de tamaño se cargarán dinámicamente -->
+                    <label for="modal-size-select">Tamaño:</label>
+                    
+                    <select id="modal-size-select">
+                        <option value="" disabled selected>Selecciona una opción...</option>
+                        </select>
+                    
+                    <div id="modal-size-custom-container" style="display: none; margin-top: 10px;">
+                        <input type="text" id="modal-size-custom-text" placeholder="Especifica el tamaño (ej: 12cm)">
+                    </div>
+
                     <div id="error-size-standard" class="error-message">Por favor selecciona un tamaño</div>
                     <div id="error-size-custom-text" class="error-message">Por favor especifica el tamaño personalizado</div>
                 </div>

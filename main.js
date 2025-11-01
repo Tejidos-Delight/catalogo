@@ -1,3 +1,6 @@
+// =================================================================
+// ARCHIVO main.js (CORREGIDO para usar el SELECT de Tamaño)
+// =================================================================
 document.addEventListener("DOMContentLoaded", () => {
     // --- Variables del Modal ---
     const modalOverlay = document.getElementById('modal-overlay');
@@ -17,10 +20,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const instructionsStandard = document.getElementById('instructions-standard');
     const instructionsCustom = document.getElementById('instructions-custom');
 
-    // --- Inputs Estándar (Tamaño) ---
-    const radioSize10cm = document.getElementById('size-standard-10');
-    const radioSizeCustom = document.getElementById('size-standard-custom');
-    const textSizeCustom = document.getElementById('size-standard-custom-text');
+    // --- Inputs Estándar (Tamaño) - MODIFICADO ---
+    // Estas son las variables para tu nuevo <select> en amigurumis.html
+    const modalSizeSelect = document.getElementById('modal-size-select');
+    const modalSizeCustomContainer = document.getElementById('modal-size-custom-container');
+    const modalSizeCustomText = document.getElementById('modal-size-custom-text');
     
     // --- Inputs Personalizados (Tamaño) ---
     const modalSizeCustomInput = document.getElementById('modal-size-custom');
@@ -44,7 +48,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let currentProductType = "standard";
     let currentQuantity = 1;
     let isEditingCartItem = false;
-    let editingCartItemName = "";
+    let editingCartItemName = ""; // Almacenará el 'identifier' único
     let currentSizeConfig = {};
     let currentPackagingConfig = {};
     
@@ -90,9 +94,10 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         });
         
-        // Listeners de formularios
-        if (radioSize10cm) radioSize10cm.addEventListener('change', toggleCustomSize);
-        if (radioSizeCustom) radioSizeCustom.addEventListener('change', toggleCustomSize);
+        // Listeners de formularios (MODIFICADO)
+        // Ya no escuchamos a los radios, escuchamos al <select>
+        if (modalSizeSelect) modalSizeSelect.addEventListener('change', updateAddToCartButton);
+        if (modalSizeCustomText) modalSizeCustomText.addEventListener('input', updateAddToCartButton);
         
         if (waButton) waButton.addEventListener('click', sendWhatsApp);
         if (igButton) igButton.addEventListener('click', sendInstagram);
@@ -134,21 +139,12 @@ document.addEventListener("DOMContentLoaded", () => {
             continueShoppingBtn.addEventListener('click', () => toggleCart(true));
         }
         
-        // Listeners para validación en tiempo real
+        // Listeners para validación en tiempo real (MODIFICADO)
         if (modalSizeCustomInput) {
             modalSizeCustomInput.addEventListener('input', updateAddToCartButton);
         }
-        if (textSizeCustom) {
-            textSizeCustom.addEventListener('input', updateAddToCartButton);
-        }
         if (modalPackagingSelect) {
             modalPackagingSelect.addEventListener('change', updateAddToCartButton);
-        }
-        if (radioSize10cm) {
-            radioSize10cm.addEventListener('change', updateAddToCartButton);
-        }
-        if (radioSizeCustom) {
-            radioSizeCustom.addEventListener('change', updateAddToCartButton);
         }
 
         // Listener para el botón de añadir al carrito en el modal
@@ -169,13 +165,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 toggleFavorite(productName, productPrice, productImg, e.target.closest('.favorite-btn'));
             }
             
-            // Botones de agregar al carrito desde tarjetas - NUEVO: Abrir modal para seleccionar opciones
+            // Botones de agregar al carrito desde tarjetas
             if (e.target.closest('.add-to-cart-btn')) {
                 e.preventDefault();
                 const productCard = e.target.closest('.product-card');
                 const viewBtn = productCard.querySelector('.view-btn');
                 
-                // Simular clic en el botón de ver detalles para abrir el modal
                 if (viewBtn) {
                     viewBtn.click();
                 }
@@ -195,10 +190,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 e.preventDefault();
                 const btn = e.target.closest('.cart-quantity-btn');
                 const cartItem = btn.closest('.cart-item');
-                const productName = cartItem.querySelector('.cart-item-name').textContent;
+                const itemIdentifier = cartItem.dataset.identifier; // Usar data-attribute
                 const isIncrease = btn.textContent === '+';
                 
-                updateCartItemQuantity(productName, isIncrease);
+                updateCartItemQuantity(itemIdentifier, isIncrease);
             }
 
             // Selectores de método de pago
@@ -211,10 +206,14 @@ document.addEventListener("DOMContentLoaded", () => {
             if (e.target.closest('.cart-item-edit')) {
                 e.preventDefault();
                 const btn = e.target.closest('.cart-item-edit');
-                const cartItem = btn.closest('.cart-item');
-                const productName = cartItem.querySelector('.cart-item-name').textContent;
-                
-                editCartItem(productName);
+                editCartItem(btn.dataset.identifier);
+            }
+
+            // Botones de eliminar producto en el carrito
+            if (e.target.closest('.cart-item-remove')) {
+                e.preventDefault();
+                const btn = e.target.closest('.cart-item-remove');
+                removeFromCart(btn.dataset.identifier);
             }
         });
     }
@@ -404,43 +403,42 @@ document.addEventListener("DOMContentLoaded", () => {
             name, price, details, quantity, size, packaging
         });
         
-        // Convertir imagen base64 a URL simple para ahorrar espacio
         let optimizedImg = img;
         if (img && img.startsWith('data:image')) {
-            // Si es base64, usar una imagen genérica o extraer solo el nombre del archivo
-            if (img.includes('imagenes/')) {
-                // Extraer la ruta de la imagen si está en base64 pero contiene la ruta
-                optimizedImg = img.split('imagenes/')[1] || 'personalizado.jpg';
-            } else {
-                // Usar imagen genérica para productos con imágenes base64
-                optimizedImg = 'imagenes/personalizado.jpg';
-            }
+            optimizedImg = 'imagenes/personalizado.jpg';
         }
+
+        // Crear un identificador único para el item
+        const itemIdentifier = name + size + packaging;
         
         // Si estamos editando, actualizar el producto existente
         if (isEditingCartItem) {
             console.log('✏️ Editando producto existente:', editingCartItemName);
-            const itemIndex = cart.findIndex(item => item.name === editingCartItemName);
+            const itemIndex = cart.findIndex(item => item.identifier === editingCartItemName);
             if (itemIndex !== -1) {
-                cart[itemIndex].name = name;
-                cart[itemIndex].price = price;
-                cart[itemIndex].img = optimizedImg;
-                cart[itemIndex].details = details;
-                cart[itemIndex].quantity = quantity;
-                cart[itemIndex].size = size;
-                cart[itemIndex].packaging = packaging;
+                cart[itemIndex] = {
+                    ...cart[itemIndex], // Mantener datos antiguos si no se proveen
+                    name: name,
+                    price: price,
+                    img: optimizedImg,
+                    details: details,
+                    quantity: quantity,
+                    size: size,
+                    packaging: packaging,
+                    identifier: itemIdentifier // Actualizar identificador
+                };
                 
                 // Resetear estado de edición
                 isEditingCartItem = false;
                 editingCartItemName = "";
                 console.log('✅ Producto editado exitosamente');
             } else {
-                console.log('❌ No se encontró producto para editar');
+                console.log('❌ No se encontró producto para editar con identifier:', editingCartItemName);
             }
         } else {
-            // Buscar si ya existe un producto con el mismo nombre y detalles
+            // Buscar si ya existe un producto con el mismo ID único
             const existingIndex = cart.findIndex(item => 
-                item.name === name && item.details === details
+                item.identifier === itemIdentifier
             );
             
             if (existingIndex !== -1) {
@@ -457,7 +455,8 @@ document.addEventListener("DOMContentLoaded", () => {
                     details,
                     quantity: quantity,
                     size: size,
-                    packaging: packaging
+                    packaging: packaging,
+                    identifier: itemIdentifier // Guardar identificador
                 });
             }
         }
@@ -478,8 +477,8 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    function updateCartItemQuantity(productName, isIncrease) {
-        const itemIndex = cart.findIndex(item => item.name === productName);
+    function updateCartItemQuantity(itemIdentifier, isIncrease) {
+        const itemIndex = cart.findIndex(item => item.identifier === itemIdentifier);
         
         if (itemIndex !== -1) {
             if (isIncrease) {
@@ -500,8 +499,8 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
     
-    function removeFromCart(name) {
-        cart = cart.filter(item => item.name !== name);
+    function removeFromCart(identifier) {
+        cart = cart.filter(item => item.identifier !== identifier);
         saveCartToStorage();
         updateCartCounter();
         updateCartDisplay();
@@ -526,12 +525,10 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     
     // --- Función para editar producto en el carrito ---
-    function editCartItem(productName) {
-        const itemIndex = cart.findIndex(item => item.name === productName);
+    function editCartItem(itemIdentifier) {
+        const item = cart.find(item => item.identifier === itemIdentifier);
         
-        if (itemIndex !== -1) {
-            const item = cart[itemIndex];
-            
+        if (item) {
             // Cerrar el carrito primero
             toggleCart(true); // true para forzar cierre
             
@@ -540,7 +537,7 @@ document.addEventListener("DOMContentLoaded", () => {
             let viewBtn = null;
             
             productCards.forEach(card => {
-                if (card.querySelector('h3').textContent === productName) {
+                if (card.querySelector('h3').textContent === item.name) {
                     viewBtn = card.querySelector('.view-btn');
                 }
             });
@@ -548,7 +545,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (viewBtn) {
                 // Configurar estado de edición
                 isEditingCartItem = true;
-                editingCartItemName = productName;
+                editingCartItemName = itemIdentifier; // Usar el identifier
                 
                 // Abrir el modal con el producto después de un pequeño delay
                 setTimeout(() => {
@@ -556,17 +553,25 @@ document.addEventListener("DOMContentLoaded", () => {
                     
                     // Pre-cargar los valores actuales del producto
                     setTimeout(() => {
+                        // --- LÓGICA DE PRE-CARGA MODIFICADA ---
                         if (item.size && item.size !== "No especificado") {
-                            if (item.size === "10cm (Estándar)") {
-                                if (radioSize10cm) radioSize10cm.checked = true;
-                            } else {
-                                if (radioSizeCustom) {
-                                    radioSizeCustom.checked = true;
-                                    if (textSizeCustom) {
-                                        textSizeCustom.value = item.size;
-                                        textSizeCustom.style.display = 'block';
+                            // Intentar encontrar el valor en el select
+                            let foundInSelect = false;
+                            if (modalSizeSelect) {
+                                for (let option of modalSizeSelect.options) {
+                                    if (option.value === item.size) {
+                                        option.selected = true;
+                                        foundInSelect = true;
+                                        break;
                                     }
                                 }
+                            }
+                            
+                            // Si no se encontró, es un tamaño personalizado
+                            if (!foundInSelect && modalSizeSelect) {
+                                modalSizeSelect.value = "custom"; // Seleccionar "Otro"
+                                if (modalSizeCustomText) modalSizeCustomText.value = item.size;
+                                if (modalSizeCustomContainer) modalSizeCustomContainer.style.display = 'block';
                             }
                         }
                         
@@ -581,10 +586,13 @@ document.addEventListener("DOMContentLoaded", () => {
                             updateQuantityDisplay();
                         }
                         
-                        // Actualizar el texto del botón para indicar que estamos editando
+                        // Actualizar el texto del botón
                         if (modalAddToCartBtn) {
                             modalAddToCartBtn.textContent = '🛒 Actualizar Producto';
                         }
+                        // Re-validar el botón
+                        updateAddToCartButton(); 
+
                     }, 100);
                 }, 300); // Pequeño delay para que se cierre el carrito primero
             }
@@ -615,6 +623,8 @@ document.addEventListener("DOMContentLoaded", () => {
         cart.forEach(item => {
             const itemElement = document.createElement('div');
             itemElement.className = 'cart-item';
+            // Guardar el identifier en el elemento para los botones
+            itemElement.dataset.identifier = item.identifier;
             
             // Calcular precio numérico
             const priceValue = parseFloat(item.price.replace('$', '')) || 0;
@@ -642,10 +652,10 @@ document.addEventListener("DOMContentLoaded", () => {
                         <button class="cart-quantity-btn">-</button>
                         <input type="text" class="cart-quantity-input" value="${item.quantity}" readonly>
                         <button class="cart-quantity-btn">+</button>
-                        <button class="cart-item-edit" data-name="${item.name}">✏️ Editar</button>
+                        <button class="cart-item-edit" data-identifier="${item.identifier}">✏️ Editar</button>
                     </div>
                 </div>
-                <button class="cart-item-remove" data-name="${item.name}">&times;</button>
+                <button class="cart-item-remove" data-identifier="${item.identifier}">&times;</button>
             `;
             
             cartItemsContainer.appendChild(itemElement);
@@ -653,19 +663,7 @@ document.addEventListener("DOMContentLoaded", () => {
         
         if (cartTotalElement) cartTotalElement.textContent = `$${total.toFixed(2)}`;
         
-        // Agregar event listeners a los botones de eliminar
-        document.querySelectorAll('.cart-item-remove').forEach(btn => {
-            btn.addEventListener('click', function() {
-                removeFromCart(this.dataset.name);
-            });
-        });
-        
-        // Agregar event listeners a los botones de editar
-        document.querySelectorAll('.cart-item-edit').forEach(btn => {
-            btn.addEventListener('click', function() {
-                editCartItem(this.dataset.name);
-            });
-        });
+        // Los listeners ahora se manejan por delegación en setupEventListeners
     }
     
     function proceedToCheckout() {
@@ -723,10 +721,8 @@ document.addEventListener("DOMContentLoaded", () => {
     // --- Almacenamiento local ---
     function saveCartToStorage() {
         try {
-            // Limitar el tamaño del carrito para evitar exceder el quota
             const cartToSave = cart.map(item => ({
                 ...item,
-                // No guardar imágenes base64 grandes
                 img: item.img && item.img.startsWith('data:image') ? 'imagenes/personalizado.jpg' : item.img
             }));
             
@@ -735,11 +731,8 @@ document.addEventListener("DOMContentLoaded", () => {
         } catch (error) {
             console.error('❌ Error guardando carrito:', error);
             if (error.name === 'QuotaExceededError') {
-                // Si el localStorage está lleno, limpiar y guardar solo los últimos items
                 console.warn('⚠️ localStorage lleno, limpiando carrito antiguo');
                 localStorage.removeItem('tejidosDelightCart');
-                
-                // Guardar solo los últimos 5 items para evitar llenar el storage
                 const limitedCart = cart.slice(-5);
                 try {
                     localStorage.setItem('tejidosDelightCart', JSON.stringify(limitedCart));
@@ -756,11 +749,14 @@ document.addEventListener("DOMContentLoaded", () => {
             const savedCart = localStorage.getItem('tejidosDelightCart');
             if (savedCart) {
                 cart = JSON.parse(savedCart);
-                // Asegurarse de que todos los items tengan cantidad y imagen válida
                 cart.forEach(item => {
                     if (!item.quantity) item.quantity = 1;
                     if (!item.img || item.img.startsWith('data:image')) {
                         item.img = 'imagenes/personalizado.jpg';
+                    }
+                    // Asegurar que cada item tenga un 'identifier'
+                    if (!item.identifier) {
+                        item.identifier = item.name + (item.size || '') + (item.packaging || '');
                     }
                 });
                 console.log('📥 Carrito cargado:', cart.length, 'productos');
@@ -768,7 +764,6 @@ document.addEventListener("DOMContentLoaded", () => {
         } catch (e) {
             console.error('❌ Error loading cart:', e);
             cart = [];
-            // Limpiar localStorage corrupto
             localStorage.removeItem('tejidosDelightCart');
         }
     }
@@ -781,12 +776,9 @@ document.addEventListener("DOMContentLoaded", () => {
         const savedFavorites = localStorage.getItem('tejidosDelightFavorites');
         if (savedFavorites) {
             favorites = JSON.parse(savedFavorites);
-            
-            // Actualizar botones de favoritos
             document.querySelectorAll('.product-card').forEach(card => {
                 const productName = card.querySelector('h3').textContent;
                 const favoriteBtn = card.querySelector('.favorite-btn');
-                
                 if (favoriteBtn && favorites.some(item => item.name === productName)) {
                     favoriteBtn.classList.add('active');
                 }
@@ -801,114 +793,86 @@ document.addEventListener("DOMContentLoaded", () => {
         
         currentProductName = link.dataset.name;
         currentProductType = link.dataset.type || 'standard';
-        currentQuantity = 1; // Resetear cantidad
+        currentQuantity = 1; 
         
         modalImg.src = link.dataset.img;
         modalName.textContent = currentProductName;
         modalPrice.textContent = link.dataset.price;
 
-        // Obtener configuraciones de tamaño y empaque con valores por defecto
-        try {
-            currentSizeConfig = JSON.parse(link.dataset.sizeConfig || '{}');
-        } catch (e) {
-            console.error('Error parsing sizeConfig:', e);
-            currentSizeConfig = {
-                type: 'customizable',
-                defaultValue: '10cm',
-                options: ['10cm', '15cm', '20cm', 'Personalizado']
-            };
-        }
+        try { currentSizeConfig = JSON.parse(link.dataset.sizeConfig || '{}'); } catch (e) { currentSizeConfig = {}; }
+        try { currentPackagingConfig = JSON.parse(link.dataset.packagingConfig || '{}'); } catch (e) { currentPackagingConfig = {}; }
         
-        try {
-            currentPackagingConfig = JSON.parse(link.dataset.packagingConfig || '{}');
-        } catch (e) {
-            console.error('Error parsing packagingConfig:', e);
-            currentPackagingConfig = {
-                type: 'customizable',
-                defaultValue: 'Caja con visor',
-                options: ['Caja con visor', 'Bolsa de papel', 'Funda transparente']
-            };
-        }
+        // Asegurar valores mínimos
+        if (!currentSizeConfig.type) { currentSizeConfig.type = 'customizable'; }
+        if (!currentSizeConfig.options) { currentSizeConfig.options = ['10cm', '15cm', '20cm']; }
+        if (!currentSizeConfig.defaultValue) { currentSizeConfig.defaultValue = currentSizeConfig.options[0]; }
+        if (!currentPackagingConfig.type) { currentPackagingConfig.type = 'customizable'; }
+        if (!currentPackagingConfig.options) { currentPackagingConfig.options = ['Caja con visor', 'Bolsa de papel']; }
+        if (!currentPackagingConfig.defaultValue) { currentPackagingConfig.defaultValue = currentPackagingConfig.options[0]; }
         
-        // Asegurar que las configuraciones tengan valores mínimos
-        if (!currentSizeConfig.type) {
-            currentSizeConfig.type = 'customizable';
-        }
-        if (!currentSizeConfig.options) {
-            currentSizeConfig.options = ['10cm', '15cm', '20cm', 'Personalizado'];
-        }
-        if (!currentSizeConfig.defaultValue && currentSizeConfig.options.length > 0) {
-            currentSizeConfig.defaultValue = currentSizeConfig.options[0];
-        }
-        
-        if (!currentPackagingConfig.type) {
-            currentPackagingConfig.type = 'customizable';
-        }
-        if (!currentPackagingConfig.options) {
-            currentPackagingConfig.options = ['Caja con visor', 'Bolsa de papel', 'Funda transparente'];
-        }
-        if (!currentPackagingConfig.defaultValue && currentPackagingConfig.options.length > 0) {
-            currentPackagingConfig.defaultValue = currentPackagingConfig.options[0];
-        }
-        
-        // --- El resto del código de openModal permanece igual ---
-        // Configurar formulario de tamaño
-        if (formSizeStandard && formSizeCustom) {
+        // --- LÓGICA DE TAMAÑO (MODIFICADA) ---
+        if (formSizeStandard && modalSizeSelect) {
+            formSizeStandard.style.display = 'block';
+            
+            // 1. Limpiar el select y el input de texto
+            modalSizeSelect.innerHTML = '<option value="" disabled selected>Selecciona una opción...</option>';
+            modalSizeCustomText.value = '';
+            modalSizeCustomContainer.style.display = 'none';
+
+            // 2. Llenar el select con las opciones del producto
             if (currentSizeConfig.type === 'fixed') {
-                // Tamaño fijo
-                formSizeStandard.style.display = 'none';
-                formSizeCustom.style.display = 'block';
-                modalSizeCustomInput.value = currentSizeConfig.value || '10cm';
-                modalSizeCustomInput.readOnly = true;
-                modalSizeCustomInput.placeholder = `Tamaño fijo: ${currentSizeConfig.value || '10cm'}`;
+                // Si es fijo, solo poner esa opción
+                const optionElement = document.createElement('option');
+                optionElement.value = currentSizeConfig.value || "Tamaño único";
+                optionElement.textContent = currentSizeConfig.value || "Tamaño único";
+                modalSizeSelect.appendChild(optionElement);
+                modalSizeSelect.value = optionElement.value; // Seleccionarlo
             } else {
-                // Tamaño personalizable
-                formSizeStandard.style.display = 'block';
-                formSizeCustom.style.display = 'none';
-                
-                // Limpiar opciones anteriores
-                const existingRadios = formSizeStandard.querySelectorAll('.radio-group');
-                existingRadios.forEach(radio => radio.remove());
-                
-                // Agregar nuevas opciones
+                // Si es personalizable, poner las opciones
                 if (currentSizeConfig.options && currentSizeConfig.options.length > 0) {
-                    currentSizeConfig.options.forEach((option, index) => {
-                        const radioId = `size-option-${index}`;
-                        const radioDiv = document.createElement('div');
-                        radioDiv.className = 'radio-group';
-                        const isChecked = option === currentSizeConfig.defaultValue || 
-                          (index === 0 && !currentSizeConfig.defaultValue);
-                        radioDiv.innerHTML = `
-                        <input type="radio" id="${radioId}" name="size-standard" value="${option}" ${isChecked ? 'checked' : ''}>
-                        <label for="${radioId}">${option}</label>
-                        `;
-                        formSizeStandard.insertBefore(radioDiv, formSizeStandard.querySelector('.input-hidden'));
+                    currentSizeConfig.options.forEach(option => {
+                        const optionElement = document.createElement('option');
+                        optionElement.value = option;
+                        optionElement.textContent = option;
+                        modalSizeSelect.appendChild(optionElement);
                     });
                 }
-                
-                // Agregar opción personalizada
-                const customRadioDiv = document.createElement('div');
-                customRadioDiv.className = 'radio-group';
-                customRadioDiv.innerHTML = `
-                    <input type="radio" id="size-custom-option" name="size-standard" value="custom">
-                    <label for="size-custom-option">Personalizado</label>
-                `;
-                formSizeStandard.insertBefore(customRadioDiv, formSizeStandard.querySelector('.input-hidden'));
-                
-                // Configurar evento para opción personalizada
-                setTimeout(() => {
-                    const customRadio = document.getElementById('size-custom-option');
-                    if (customRadio) {
-                        customRadio.addEventListener('change', toggleCustomSize);
-                    }
-                    
-                    // También agregar eventos a todos los radios de tamaño
-                    document.querySelectorAll('input[name="size-standard"]').forEach(radio => {
-                        radio.addEventListener('change', updateAddToCartButton);
-                    });
-                }, 100);
+                 // 3. (CLAVE) Solo añadir "Personalizado" si el tipo de producto es "custom"
+                if (currentProductType === 'custom') {
+                    const customOption = document.createElement('option');
+                    customOption.value = "custom"; // Valor especial
+                    customOption.textContent = "Otro (Personalizado)";
+                    modalSizeSelect.appendChild(customOption);
+                }
             }
+
+            // 4. Seleccionar valor por defecto si no es fijo
+            if (currentSizeConfig.type !== 'fixed' && currentSizeConfig.defaultValue) {
+                // Asegurarse de que el defaultValue exista como opción
+                let optionExists = false;
+                for (let option of modalSizeSelect.options) {
+                    if (option.value === currentSizeConfig.defaultValue) {
+                        optionExists = true;
+                        break;
+                    }
+                }
+                if (optionExists) {
+                    modalSizeSelect.value = currentSizeConfig.defaultValue;
+                }
+            }
+
+            // 5. Añadir listener para mostrar/ocultar el input de texto
+            modalSizeSelect.onchange = () => {
+                if (modalSizeSelect.value === 'custom') {
+                    modalSizeCustomContainer.style.display = 'block';
+                } else {
+                    modalSizeCustomContainer.style.display = 'none';
+                }
+                updateAddToCartButton(); // Validar al cambiar
+            };
         }
+        
+        if (formSizeCustom) formSizeCustom.style.display = 'none'; // Ocultar el formulario antiguo
 
         
         // --- Configurar formulario de empaque ---
@@ -979,17 +943,7 @@ document.addEventListener("DOMContentLoaded", () => {
         editingCartItemName = "";
     }
 
-    function toggleCustomSize() {
-        if (radioSizeCustom && radioSizeCustom.checked) {
-            if (textSizeCustom) textSizeCustom.style.display = 'block';
-        } else {
-            if (textSizeCustom) {
-                textSizeCustom.style.display = 'none';
-                textSizeCustom.value = "";
-            }
-        }
-        updateAddToCartButton();
-    }
+    // --- FUNCIÓN toggleCustomSize ELIMINADA (ya no se usa) ---
     
     // --- Función para validar formulario ---
     function validateForm() {
@@ -1004,40 +958,18 @@ document.addEventListener("DOMContentLoaded", () => {
             error.style.display = 'none';
         });
         
-        // Validar tamaño
-        if (currentSizeConfig.type === 'fixed') {
-            console.log('✅ Tamaño fijo - siempre válido');
-            // Para tamaño fijo, siempre es válido
-            isValid = true;
-        } else {
-            console.log('🔍 Validando tamaño personalizable');
-            // Para tamaño personalizable
-            const selectedSize = document.querySelector('input[name="size-standard"]:checked');
-            console.log('📻 Radio seleccionado:', selectedSize);
-            
-            if (!selectedSize) {
-                console.log('❌ No se seleccionó tamaño');
-                const errorElement = document.getElementById('error-size-standard');
-                if (errorElement) {
-                    errorElement.style.display = 'block';
-                    errorElement.textContent = 'Por favor selecciona un tamaño';
-                }
+        // Validar tamaño (MODIFICADO)
+        const sizeValue = modalSizeSelect.value;
+        if (!sizeValue) {
+            isValid = false;
+            document.getElementById('error-size-standard').style.display = 'block';
+            modalSizeSelect.classList.add('error-highlight');
+        } else if (sizeValue === 'custom') {
+            const customText = modalSizeCustomText.value.trim();
+            if (!customText) {
                 isValid = false;
-            } else if (selectedSize.value === 'custom') {
-                console.log('🔍 Validando tamaño personalizado');
-                const customSize = textSizeCustom ? textSizeCustom.value.trim() : '';
-                console.log('📝 Tamaño personalizado:', customSize);
-                
-                if (!customSize) {
-                    console.log('❌ Tamaño personalizado vacío');
-                    const errorElement = document.getElementById('error-size-custom-text');
-                    if (errorElement) {
-                        errorElement.style.display = 'block';
-                        errorElement.textContent = 'Por favor especifica el tamaño personalizado';
-                    }
-                    if (textSizeCustom) textSizeCustom.classList.add('error-highlight');
-                    isValid = false;
-                }
+                document.getElementById('error-size-custom-text').style.display = 'block';
+                modalSizeCustomText.classList.add('error-highlight');
             }
         }
         
@@ -1067,15 +999,13 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // --- Función para añadir al carrito desde el modal ---
-    // En main.js - modifica la función addToCartFromModal()
     function addToCartFromModal() {
         console.log('🔴 addToCartFromModal llamado');
         
         if (!validateForm()) {
             console.log('❌ Validación falló');
-            // Mostrar mensaje general de error
             showFavoritesMessage('Por favor completa todos los campos requeridos');
-            return; // Detener si la validación falla
+            return; 
         }
         
         console.log('✅ Validación pasó');
@@ -1102,7 +1032,7 @@ document.addEventListener("DOMContentLoaded", () => {
         // Mostrar confirmación
         if (modalAddToCartBtn) {
             console.log('✅ Producto agregado, mostrando confirmación');
-            const originalText = modalAddToCartBtn.innerHTML;
+            const originalText = isEditingCartItem ? '🛒 Actualizar Producto' : '🛒 Añadir al Carrito';
             const successText = isEditingCartItem ? '✓ Producto Actualizado' : '✓ Producto Añadido';
             modalAddToCartBtn.innerHTML = successText;
             modalAddToCartBtn.style.backgroundColor = '#25D366';
@@ -1122,34 +1052,18 @@ document.addEventListener("DOMContentLoaded", () => {
         console.log('🔄 Actualizando botón añadir al carrito');
         
         if (modalAddToCartBtn) {
-            // Habilitar/deshabilitar basado en validación básica
+            // Habilitar/deshabilitar basado en validación básica (MODIFICADO)
             const packaging = modalPackagingSelect ? modalPackagingSelect.value : '';
+            const sizeValue = modalSizeSelect ? modalSizeSelect.value : '';
             let sizeValid = false;
-            
-            if (currentSizeConfig.type === 'fixed') {
-                // Tamaño fijo siempre es válido
+    
+            if (sizeValue === 'custom') {
+                sizeValid = modalSizeCustomText.value.trim() !== '';
+            } else if (sizeValue !== '') {
                 sizeValid = true;
-                console.log('✅ Tamaño fijo - válido');
-            } else {
-                // Tamaño personalizable necesita selección
-                const hasSizeSelected = document.querySelector('input[name="size-standard"]:checked');
-                console.log('📻 ¿Tiene tamaño seleccionado?:', !!hasSizeSelected);
-                
-                if (hasSizeSelected) {
-                    if (hasSizeSelected.value === 'custom') {
-                        const customSize = textSizeCustom ? textSizeCustom.value.trim() : '';
-                        sizeValid = customSize !== '';
-                        console.log('📝 Tamaño personalizado válido:', sizeValid, 'Valor:', customSize);
-                    } else {
-                        sizeValid = true;
-                        console.log('✅ Tamaño estándar seleccionado - válido');
-                    }
-                } else {
-                    console.log('❌ No hay tamaño seleccionado');
-                }
             }
             
-            const isEnabled = sizeValid && packaging;
+            const isEnabled = sizeValid && !!packaging; // Usar !!packaging para convertir a booleano
             console.log('🎯 Estado del botón:', isEnabled ? '✅ HABILITADO' : '❌ DESHABILITADO', {
                 sizeValid,
                 packaging: packaging || 'NO SELECCIONADO'
@@ -1164,25 +1078,12 @@ document.addEventListener("DOMContentLoaded", () => {
         let size = "No especificado";
         let packaging = "No especificado";
 
-        // 1. Obtener TAMAÑO
-        if (currentSizeConfig.type === 'fixed') {
-            size = currentSizeConfig.value || "No especificado";
-            console.log('📏 Tamaño fijo:', size);
-        } else {
-            const selectedSize = document.querySelector('input[name="size-standard"]:checked');
-            console.log('📻 Radio tamaño seleccionado:', selectedSize);
-            
-            if (selectedSize) {
-                if (selectedSize.value === 'custom') {
-                    size = textSizeCustom ? textSizeCustom.value.trim() || "Personalizado (No descrito)" : "Personalizado (No descrito)";
-                    console.log('📝 Tamaño personalizado:', size);
-                } else {
-                    size = selectedSize.value;
-                    console.log('📏 Tamaño seleccionado:', size);
-                }
-            } else {
-                console.log('⚠️ No se encontró tamaño seleccionado');
-            }
+        // 1. Obtener TAMAÑO (MODIFICADO)
+        const sizeValue = modalSizeSelect.value;
+        if (sizeValue === 'custom') {
+            size = modalSizeCustomText.value.trim() || "Personalizado (No descrito)";
+        } else if (sizeValue) {
+            size = sizeValue;
         }
         
         // 2. Obtener EMPAQUE
@@ -1202,7 +1103,7 @@ document.addEventListener("DOMContentLoaded", () => {
         
         const { size, packaging } = getFormData();
         
-        const baseMessage = `¡Hola! Me interesa el producto: *${currentProductName}*.\n\n*Tamaño:* ${size}\n*Empaque:* ${packaging}\n\nQuedo atento/a a la cotización. ¡Gracias!`;
+        const baseMessage = `¡Hola! Me interesa el producto: *${currentProductName}*.\n\n*Tamaño:* ${size}\n*Empaque:* ${packaging}\n\Dosificación:* ${currentQuantity}\n\nQuedo atento/a a la cotización. ¡Gracias!`;
         const encodedMessage = encodeURIComponent(baseMessage);
         const waNumber = "593999406153";
         
@@ -1218,7 +1119,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         
         const { size, packaging } = getFormData();
-        const message = `¡Hola! Me interesa el producto: ${currentProductName}.\n\nTamaño: ${size}\nEmpaque: ${packaging}\n\nQuedo atento/a a la cotización. ¡Gracias!`;
+        const message = `¡Hola! Me interesa el producto: ${currentProductName}.\n\nTamaño: ${size}\nEmpaque: ${packaging}\nCantidad: ${currentQuantity}\n\nQuedo atento/a a la cotización. ¡Gracias!`;
 
         try {
             navigator.clipboard.writeText(message);
@@ -1239,7 +1140,7 @@ document.addEventListener("DOMContentLoaded", () => {
     init();
 });
 
-// Función para limpiar localStorage manualmente (útil para debugging)
+// Función para limpiar localStorage manually (útil para debugging)
 function clearStorage() {
     localStorage.clear();
     cart = [];
