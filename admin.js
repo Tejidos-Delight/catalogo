@@ -1,5 +1,5 @@
 // =================================================================
-// ARCHIVO admin.js (VERSIÓN 4 - CON SUPABASE STORAGE)
+// ARCHIVO admin.js (VERSIÓN 9 - CON OPCIÓN 'NO APLICA TAMAÑO')
 // =================================================================
 
 // 1. Importar la función de Supabase
@@ -42,10 +42,14 @@ async function checkUserSession() {
     }
 }
 
-// Configurar event listeners
+// --- FUNCIÓN 'setupEventListeners' ---
 function setupEventListeners() {
+    // Formulario de producto
     document.getElementById('product-form').addEventListener('submit', saveProduct);
     document.getElementById('product-image').addEventListener('change', previewImage);
+    document.getElementById('cancel-btn').addEventListener('click', resetForm);
+
+    // Filtros y búsqueda
     document.getElementById('category-filter').addEventListener('change', function() {
         currentFilter = this.value;
         displayProducts();
@@ -54,12 +58,17 @@ function setupEventListeners() {
         currentSort = this.value;
         displayProducts();
     });
+    document.getElementById('search-products').addEventListener('keyup', filterProducts);
+
+    // Opciones del formulario (tamaño, empaque)
     document.querySelectorAll('input[name="size-type"]').forEach(radio => {
         radio.addEventListener('change', toggleSizeOptions);
     });
     document.querySelectorAll('input[name="packaging-type"]').forEach(radio => {
         radio.addEventListener('change', togglePackagingOptions);
     });
+
+    // Botón de Cerrar Sesión
     const logoutBtn = document.getElementById('logout-btn');
     if (logoutBtn) {
         logoutBtn.addEventListener('click', async () => {
@@ -72,41 +81,41 @@ function setupEventListeners() {
         });
     }
     
-    // Listeners para los botones globales (delegación de eventos)
-    // Esto es más eficiente que añadir un listener a CADA botón
+    // Delegación de eventos para botones de productos (Mover, Editar, Borrar)
     const productsContainer = document.getElementById('products-container');
     productsContainer.addEventListener('click', function(event) {
-        const target = event.target;
+        const target = event.target.closest('button');
+        if (!target) return;
+
+        const id = target.dataset.id;
         if (target.classList.contains('btn-move-up')) {
-            moveProductUp(target.dataset.id);
+            moveProductUp(id);
         } else if (target.classList.contains('btn-move-down')) {
-            moveProductDown(target.dataset.id);
+            moveProductDown(id);
         } else if (target.classList.contains('btn-edit')) {
-            editProduct(target.dataset.id);
+            editProduct(id);
         } else if (target.classList.contains('btn-delete')) {
-            deleteProduct(target.dataset.id);
+            deleteProduct(id);
         }
     });
 
     // Listeners de los botones de navegación del panel
-    document.querySelector('button[onclick="showSection(\'products\')"]').addEventListener('click', () => showSection('products'));
-    document.querySelector('button[onclick="showSection(\'add-product\')"]').addEventListener('click', () => {
-        resetForm(); // Limpiar formulario al ir a "Agregar Producto"
+    document.getElementById('btn-ver-productos').addEventListener('click', () => showSection('products'));
+    document.getElementById('btn-agregar-producto').addEventListener('click', () => {
+        resetForm();
         showSection('add-product');
     });
-    document.querySelector('button[onclick="showSection(\'export\')"]').addEventListener('click', () => showSection('export'));
-    document.querySelector('button[onclick="window.location.href=\'index.html\'"]').addEventListener('click', () => window.location.href='index.html');
-    document.getElementById('cancel-btn').addEventListener('click', resetForm);
-    document.getElementById('search-products').addEventListener('keyup', filterProducts);
+    document.getElementById('btn-exportar-importar').addEventListener('click', () => showSection('export'));
+    document.getElementById('btn-volver-catalogo').addEventListener('click', () => window.location.href='index.html');
 
     // Listeners de Importar/Exportar
-    document.querySelector('button[onclick="exportProducts()"]').addEventListener('click', exportProducts);
-    document.querySelector('button[onclick="importProducts()"]').addEventListener('click', importProducts);
-    document.querySelector('button[onclick="resetToDefault()"]').addEventListener('click', resetToDefault);
+    document.getElementById('btn-exportar-json').addEventListener('click', exportProducts);
+    document.getElementById('btn-importar-json').addEventListener('click', importProducts);
+    document.getElementById('btn-restablecer').addEventListener('click', resetToDefault);
 }
 
 // =================================================================
-// LÓGICA DE PRODUCTOS (¡CON UPLOAD!)
+// LÓGICA DE PRODUCTOS
 // =================================================================
 
 // Cargar productos desde Supabase
@@ -125,7 +134,7 @@ async function loadProducts() {
             category: item.category,
             price: item.price,
             type: item.type,
-            image: item.image_url, // Este es el URL público del Storage
+            image: item.image_url,
             sizeConfig: item.size_config || { type: 'customizable', defaultValue: '10cm', options: ['10cm', '15cm', '20cm'] },
             packagingConfig: item.packaging_config || { type: 'customizable', defaultValue: 'Caja con visor', options: ['Caja con visor', 'Bolsa de papel'] },
             order: item.product_order || 999
@@ -138,8 +147,7 @@ async function loadProducts() {
     updateCategoryFilter();
 }
 
-// --- FUNCIÓN MODIFICADA ---
-// Ahora solo muestra el preview, no guarda el Base64
+// Muestra el preview, no guarda el Base64
 function previewImage(event) {
     const file = event.target.files[0];
     const preview = document.getElementById('image-preview');
@@ -150,15 +158,12 @@ function previewImage(event) {
             preview.style.display = 'block';
         };
         reader.readAsDataURL(file);
-        // --- ELIMINADO --- Ya no guardamos el Base64 en el input oculto
-        // document.getElementById('product-image-url').value = e.target.result;
     } else {
         preview.style.display = 'none';
     }
 }
 
-// --- FUNCIÓN MODIFICADA ---
-// Lógica de subida de archivos
+// Lógica de subida (Signed URL -> Update DB -> Delete old)
 async function saveProduct(event) {
     event.preventDefault();
     const submitButton = document.getElementById('submit-btn');
@@ -168,60 +173,70 @@ async function saveProduct(event) {
     try {
         const productId = document.getElementById('product-id').value;
         const name = document.getElementById('product-name').value;
+        
+        let imageUrl = document.getElementById('product-image-url').value;
+        const oldImageUrl = imageUrl;
+        
+        const fileInput = document.getElementById('product-image');
+        const file = fileInput.files[0];
+
+        if (file) {
+            console.log('Subiendo nueva imagen...');
+            const fileName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+            console.log(`Subiendo archivo nuevo: ${fileName}`);
+
+            // Usar Signed URL para subir
+            const { data: signData, error: signError } = await sbClient.storage
+                .from(BUCKET_NAME)
+                .createSignedUploadUrl(fileName);
+
+            if (signError) {
+                throw new Error(`Error creando URL firmada: ${signError.message}`);
+            }
+
+            const uploadResponse = await fetch(signData.signedUrl, {
+                method: 'PUT',
+                body: file,
+                headers: { 'Content-Type': file.type }
+            });
+
+            if (!uploadResponse.ok) {
+                throw new Error(`Error subiendo archivo: ${await uploadResponse.text()}`);
+            }
+            
+            const { data: publicUrlData } = sbClient.storage
+                .from(BUCKET_NAME)
+                .getPublicUrl(fileName);
+
+            imageUrl = publicUrlData.publicUrl;
+            console.log('Nueva URL de imagen:', imageUrl);
+
+        } else if (!imageUrl) {
+            imageUrl = 'imagenes/personalizado.jpg';
+        }
+
         const category = document.getElementById('product-category').value;
         const price = document.getElementById('product-price').value;
         const type = document.getElementById('product-type').value;
         
-        // 1. Obtener la URL de la imagen existente (si estamos editando)
-        let imageUrl = document.getElementById('product-image-url').value;
-        
-        // 2. Obtener el archivo NUEVO (si el usuario seleccionó uno)
-        const fileInput = document.getElementById('product-image');
-        const file = fileInput.files[0];
-
-        // 3. Lógica de subida de imagen
-        if (file) {
-            console.log('Subiendo nueva imagen...');
-            const fileName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`; // Nombre único y limpio
-
-            // Subir el archivo al bucket
-            const { data: uploadData, error: uploadError } = await sbClient.storage
-                .from(BUCKET_NAME)
-                .upload(fileName, file, {
-                    cacheControl: '3600', // 1 hora de caché
-                    upsert: false // No sobrescribir
-                });
-
-            if (uploadError) {
-                throw new Error(`Error subiendo imagen: ${uploadError.message}`);
-            }
-
-            // 4. Obtener el URL público de la imagen recién subida
-            const { data: publicUrlData } = sbClient.storage
-                .from(BUCKET_NAME)
-                .getPublicUrl(uploadData.path);
-
-            imageUrl = publicUrlData.publicUrl;
-            console.log('Nueva URL de imagen:', imageUrl);
-            
-            // (Opcional: Borrar la imagen antigua si estamos editando)
-            const oldImageUrl = document.getElementById('product-image-url').value;
-            if (productId && oldImageUrl && oldImageUrl.includes(BUCKET_NAME)) {
-                const oldFileName = oldImageUrl.split('/').pop();
-                console.log('Borrando imagen antigua:', oldFileName);
-                await sbClient.storage.from(BUCKET_NAME).remove([oldFileName]);
-            }
-
-        } else if (!imageUrl) {
-            // No hay archivo nuevo Y no hay imagen existente
-            imageUrl = 'imagenes/personalizado.jpg'; // Asignar imagen por defecto
-        }
-
-        // 5. Preparar el resto de los datos del producto
+        // --- LÓGICA DE TAMAÑO ACTUALIZADA (Incluye 'none') ---
         const sizeType = document.querySelector('input[name="size-type"]:checked').value;
         let sizeConfig = {};
-        if (sizeType === 'fixed') { sizeConfig = { type: 'fixed', value: document.getElementById('fixed-size').value || '10cm' }; } 
-        else { const sizeOptions = document.getElementById('size-options').value.split(',').map(opt => opt.trim()).filter(opt => opt !== ''); sizeConfig = { type: 'customizable', defaultValue: document.getElementById('default-size').value || '10cm', options: sizeOptions.length > 0 ? sizeOptions : ['10cm', '15cm', '20cm'] }; }
+        
+        if (sizeType === 'fixed') {
+            sizeConfig = { type: 'fixed', value: document.getElementById('fixed-size').value || '10cm' };
+        } else if (sizeType === 'customizable') {
+            const sizeOptions = document.getElementById('size-options').value.split(',').map(opt => opt.trim()).filter(opt => opt !== '');
+            sizeConfig = { 
+                type: 'customizable', 
+                defaultValue: document.getElementById('default-size').value || '10cm', 
+                options: sizeOptions.length > 0 ? sizeOptions : ['10cm', '15cm', '20cm'] 
+            };
+        } else if (sizeType === 'none') {
+            // Nueva configuración para cuando no hay tamaño
+            sizeConfig = { type: 'none' };
+        }
+        // -----------------------------------------------------
         
         const packagingType = document.querySelector('input[name="packaging-type"]:checked').value;
         let packagingConfig = {};
@@ -237,12 +252,11 @@ async function saveProduct(event) {
             category: category,
             price: price,
             type: type,
-            image_url: imageUrl, // 6. Guardar el URL del Storage
+            image_url: imageUrl,
             size_config: sizeConfig,
             packaging_config: packagingConfig
         };
 
-        // 7. Guardar en la base de datos (igual que antes)
         if (productId) {
             const productIndex = products.findIndex(p => p.id === productId);
             productData.product_order = products[productIndex]?.order || 999;
@@ -250,8 +264,21 @@ async function saveProduct(event) {
             const { error } = await sbClient.from('products').update(productData).eq('id', productId); 
             if (error) throw error;
             
-            products[productIndex] = { ...products[productIndex], ...productData, image: productData.image_url };
+            const updatedProduct = { ...products[productIndex], ...productData, image: productData.image_url };
+            products[productIndex] = updatedProduct;
             showAlert('Producto actualizado correctamente.', 'success');
+            
+            if (file && oldImageUrl && oldImageUrl.includes(BUCKET_NAME)) {
+                const oldFileName = oldImageUrl.split('/').pop();
+                console.log('Borrando archivo antiguo:', oldFileName);
+                
+                const { error: deleteError } = await sbClient.storage.from(BUCKET_NAME).remove([oldFileName]);
+                if (deleteError) {
+                    console.warn('Advertencia: No se pudo borrar la imagen antigua.', deleteError.message);
+                    showAlert('Producto actualizado, pero no se pudo borrar la imagen antigua.', 'error');
+                }
+            }
+
         } else {
             const categoryProducts = products.filter(p => p.category === category);
             const maxOrder = categoryProducts.length > 0 ? Math.max(...categoryProducts.map(p => p.order || 0)) : 0;
@@ -260,18 +287,19 @@ async function saveProduct(event) {
             const { data, error } = await sbClient.from('products').insert(productData).select(); 
             if (error) throw error;
 
-            const newProduct = data[0]; 
-            products.push({
-                id: newProduct.id,
-                name: newProduct.name,
-                category: newProduct.category,
-                price: newProduct.price,
-                type: newProduct.type,
-                image: newProduct.image_url,
-                order: newProduct.product_order,
-                sizeConfig: newProduct.size_config,
-                packagingConfig: newProduct.packaging_config
-            });
+            const newProductData = data[0]; 
+            const newProduct = {
+                id: newProductData.id,
+                name: newProductData.name,
+                category: newProductData.category,
+                price: newProductData.price,
+                type: newProductData.type,
+                image: newProductData.image_url,
+                order: newProductData.product_order,
+                sizeConfig: newProductData.size_config,
+                packagingConfig: newProductData.packaging_config
+            };
+            products.push(newProduct);
             showAlert('Producto agregado correctamente.', 'success');
         }
         
@@ -284,35 +312,33 @@ async function saveProduct(event) {
         console.error('❌ Error guardando en Supabase:', error);
         showAlert(`Error: ${error.message}`, 'error');
     } finally {
-        // Reactivar el botón
         submitButton.disabled = false;
         submitButton.textContent = 'Guardar Producto';
     }
 }
 
-// Eliminar producto (¡y su imagen!)
+// Borra el producto de la DB y la imagen del Storage
 async function deleteProduct(id) {
     if (confirm('¿Estás seguro de que quieres eliminar este producto?')) {
         try {
-            // 1. Encontrar el producto para obtener la URL de la imagen
             const product = products.find(p => p.id === id);
             
-            // 2. Eliminar de la base de datos
             const { error: dbError } = await sbClient.from('products').delete().eq('id', id);
             if (dbError) throw dbError;
 
-            // 3. Eliminar la imagen del Storage (si existe y es del storage)
             if (product && product.image && product.image.includes(BUCKET_NAME)) {
                 const fileName = product.image.split('/').pop();
-                console.log('Borrando imagen:', fileName);
-                const { error: storageError } = await sbClient.storage.from(BUCKET_NAME).remove([fileName]);
+                console.log('Borrando imagen del storage:', fileName);
+                
+                const { error: storageError } = await sbClient.storage
+                    .from(BUCKET_NAME)
+                    .remove([fileName]);
+                
                 if (storageError) {
-                    // No detener la ejecución, solo registrar el error
                     console.warn('No se pudo borrar la imagen antigua:', storageError.message);
                 }
             }
 
-            // 4. Eliminar del array local
             products = products.filter(p => p.id !== id);
             localStorage.setItem('tejidosDelightProducts', JSON.stringify(products));
             displayProducts();
@@ -326,7 +352,7 @@ async function deleteProduct(id) {
 }
 
 // =================================================================
-// FUNCIONES DE UI (Modificadas)
+// FUNCIONES DE UI
 // =================================================================
 
 function displayProducts(filteredProducts = null) {
@@ -344,7 +370,6 @@ function displayProducts(filteredProducts = null) {
         return;
     }
     
-    // Ahora los botones usan data-id para la delegación de eventos
     container.innerHTML = productsToDisplay.map((product, index) => {
         const isFirst = index === 0;
         const isLast = index === productsToDisplay.length - 1;
@@ -392,6 +417,8 @@ function updateCategoryFilter() {
 
 function getSizeDisplay(sizeConfig) {
     if (!sizeConfig) return 'No configurado';
+    // Mostrar 'No aplica' en la tarjeta del admin
+    if (sizeConfig.type === 'none') { return 'No aplica'; }
     if (sizeConfig.type === 'fixed') { return `Fijo: ${sizeConfig.value || 'No especificado'}`; } 
     else { const options = sizeConfig.options ? sizeConfig.options.join(', ') : 'No especificadas'; const defaultValue = sizeConfig.defaultValue || 'No especificado'; return `Personalizable: ${defaultValue} (${options})`; }
 }
@@ -502,12 +529,15 @@ function editProduct(id) {
         if (product.sizeConfig && product.sizeConfig.type === 'fixed') {
             document.querySelector('input[name="size-type"][value="fixed"]').checked = true;
             document.getElementById('fixed-size').value = product.sizeConfig.value || '10cm';
+        } else if (product.sizeConfig && product.sizeConfig.type === 'none') {
+            // --- MODIFICADO: Cargar opción 'none' ---
+            document.querySelector('input[name="size-type"][value="none"]').checked = true;
         } else {
             document.querySelector('input[name="size-type"][value="customizable"]').checked = true;
             document.getElementById('default-size').value = product.sizeConfig?.defaultValue || '10cm';
             document.getElementById('size-options').value = product.sizeConfig?.options ? product.sizeConfig.options.join(', ') : '10cm,15cm,20cm';
         }
-        toggleSizeOptions.call(document.querySelector('input[name="size-type"]:checked'));
+        toggleSizeOptions(); // Actualizar UI
         
         if (product.packagingConfig && product.packagingConfig.type === 'fixed') {
             document.querySelector('input[name="packaging-type"][value="fixed"]').checked = true;
@@ -517,13 +547,12 @@ function editProduct(id) {
             document.getElementById('default-packaging').value = product.packagingConfig?.defaultValue || 'Caja con visor';
             document.getElementById('packaging-options').value = product.packagingConfig?.options ? product.packagingConfig.options.join(', ') : 'Caja con visor,Bolsa de papel';
         }
-        togglePackagingOptions.call(document.querySelector('input[name="packaging-type"]:checked'));
+        togglePackagingOptions(); // Usar la función correcta
         
         const preview = document.getElementById('image-preview');
         if (product.image) {
             preview.src = product.image;
             preview.style.display = 'block';
-            // --- MODIFICADO --- Guardamos el URL actual en el input oculto
             document.getElementById('product-image-url').value = product.image;
         }
         
@@ -544,17 +573,16 @@ function resetForm() {
     document.getElementById('cancel-btn').style.display = 'none';
     editingProductId = null;
     
-    // --- MODIFICADO --- Limpiar el input de archivo y el de URL
     document.getElementById('product-image').value = null;
     document.getElementById('product-image-url').value = '';
 
     document.querySelector('input[name="size-type"][value="fixed"]').checked = true;
     document.getElementById('fixed-size').value = '10cm';
-    toggleSizeOptions.call(document.querySelector('input[name="size-type"]:checked'));
+    toggleSizeOptions(); // Actualizar UI
     
     document.querySelector('input[name="packaging-type"][value="fixed"]').checked = true;
     document.getElementById('fixed-packaging').value = 'Caja con visor';
-    togglePackagingOptions.call(document.querySelector('input[name="packaging-type"]:checked'));
+    togglePackagingOptions(); // Usar la función correcta
 }
 
 function showAlert(message, type) {
@@ -609,11 +637,23 @@ async function resetToDefault() {
     }
 }
 
+// --- FUNCIÓN 'toggleSizeOptions' MODIFICADA ---
 function toggleSizeOptions() {
     const customizableOptions = document.getElementById('customizable-size-options');
-    const isCustom = document.querySelector('input[name="size-type"][value="customizable"]').checked;
-    if (isCustom) { customizableOptions.classList.remove('hidden'); }
-    else { customizableOptions.classList.add('hidden'); }
+    const selectedType = document.querySelector('input[name="size-type"]:checked').value;
+    
+    if (selectedType === 'customizable') {
+        customizableOptions.classList.remove('hidden');
+    } else {
+        customizableOptions.classList.add('hidden');
+    }
+    
+    // Deshabilitar input de tamaño fijo si es "none"
+    const fixedInput = document.getElementById('fixed-size');
+    if (fixedInput) {
+        fixedInput.disabled = (selectedType === 'none');
+        if (selectedType === 'none') fixedInput.value = '';
+    }
 }
 
 function togglePackagingOptions() {

@@ -1,5 +1,5 @@
 // =================================================================
-// ARCHIVO main.js (CORREGIDO para usar el SELECT de Tamaño)
+// ARCHIVO main.js (VERSIÓN 3 - CON OPCIÓN 'NO APLICA TAMAÑO')
 // =================================================================
 document.addEventListener("DOMContentLoaded", () => {
     // --- Variables del Modal ---
@@ -20,8 +20,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const instructionsStandard = document.getElementById('instructions-standard');
     const instructionsCustom = document.getElementById('instructions-custom');
 
-    // --- Inputs Estándar (Tamaño) - MODIFICADO ---
-    // Estas son las variables para tu nuevo <select> en amigurumis.html
+    // --- Inputs Estándar (Tamaño) ---
     const modalSizeSelect = document.getElementById('modal-size-select');
     const modalSizeCustomContainer = document.getElementById('modal-size-custom-container');
     const modalSizeCustomText = document.getElementById('modal-size-custom-text');
@@ -48,11 +47,11 @@ document.addEventListener("DOMContentLoaded", () => {
     let currentProductType = "standard";
     let currentQuantity = 1;
     let isEditingCartItem = false;
-    let editingCartItemName = ""; // Almacenará el 'identifier' único
+    let editingCartItemName = "";
     let currentSizeConfig = {};
     let currentPackagingConfig = {};
     
-    // --- Nuevas variables para funcionalidades mejoradas ---
+    // --- Nuevas variables ---
     let cart = [];
     let favorites = [];
     let selectedPaymentMethod = '';
@@ -69,7 +68,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const continueShoppingBtn = document.getElementById('continue-shopping');
     const favoritesMessage = document.getElementById('favorites-message');
     
-    // --- Función para inicializar todas las funcionalidades ---
+    // --- Función init ---
     function init() {
         loadCartFromStorage();
         loadFavoritesFromStorage();
@@ -78,13 +77,11 @@ document.addEventListener("DOMContentLoaded", () => {
         setupEventListeners();
         setupPaymentMethods();
         setupLogoAnimation();
-
         setupImageZoom();
     }
     
-    // --- Configurar todos los event listeners ---
+    // --- Event Listeners ---
     function setupEventListeners() {
-        // Event listeners existentes
         productLinks.forEach(link => {
             link.addEventListener('click', openModal);
         });
@@ -96,21 +93,17 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         });
         
-        // Listeners de formularios (MODIFICADO)
-        // Ya no escuchamos a los radios, escuchamos al <select>
         if (modalSizeSelect) modalSizeSelect.addEventListener('change', updateAddToCartButton);
         if (modalSizeCustomText) modalSizeCustomText.addEventListener('input', updateAddToCartButton);
         
         if (waButton) waButton.addEventListener('click', sendWhatsApp);
         if (igButton) igButton.addEventListener('click', sendInstagram);
         
-        // Listeners para cantidad
         if (quantityDecrease) quantityDecrease.addEventListener('click', decreaseQuantity);
         if (quantityIncrease) quantityIncrease.addEventListener('click', increaseQuantity);
         if (quantityInput) quantityInput.addEventListener('input', updateQuantity);
         if (quantityInput) quantityInput.addEventListener('change', validateQuantity);
         
-        // Nuevos event listeners
         if (searchInput) {
             searchInput.addEventListener('input', filterProducts);
         }
@@ -141,7 +134,6 @@ document.addEventListener("DOMContentLoaded", () => {
             continueShoppingBtn.addEventListener('click', () => toggleCart(true));
         }
         
-        // Listeners para validación en tiempo real (MODIFICADO)
         if (modalSizeCustomInput) {
             modalSizeCustomInput.addEventListener('input', updateAddToCartButton);
         }
@@ -149,36 +141,29 @@ document.addEventListener("DOMContentLoaded", () => {
             modalPackagingSelect.addEventListener('change', updateAddToCartButton);
         }
 
-        // Listener para el botón de añadir al carrito en el modal
         if (modalAddToCartBtn) {
             modalAddToCartBtn.addEventListener('click', addToCartFromModal);
         }
         
-        // Event delegation para botones de favoritos y agregar al carrito
         document.addEventListener('click', function(e) {
-            // Botones de favoritos
             if (e.target.closest('.favorite-btn')) {
                 e.preventDefault();
                 const productCard = e.target.closest('.product-card');
                 const productName = productCard.querySelector('h3').textContent;
                 const productPrice = productCard.querySelector('.precio').textContent;
                 const productImg = productCard.querySelector('img').src;
-                
                 toggleFavorite(productName, productPrice, productImg, e.target.closest('.favorite-btn'));
             }
             
-            // Botones de agregar al carrito desde tarjetas
             if (e.target.closest('.add-to-cart-btn')) {
                 e.preventDefault();
                 const productCard = e.target.closest('.product-card');
                 const viewBtn = productCard.querySelector('.view-btn');
-                
                 if (viewBtn) {
                     viewBtn.click();
                 }
             }
             
-            // Botones de ver detalles
             if (e.target.closest('.view-btn')) {
                 e.preventDefault();
                 const btn = e.target.closest('.view-btn');
@@ -187,31 +172,26 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             }
 
-            // Controles de cantidad en el carrito
             if (e.target.closest('.cart-quantity-btn')) {
                 e.preventDefault();
                 const btn = e.target.closest('.cart-quantity-btn');
                 const cartItem = btn.closest('.cart-item');
-                const itemIdentifier = cartItem.dataset.identifier; // Usar data-attribute
+                const itemIdentifier = cartItem.dataset.identifier;
                 const isIncrease = btn.textContent === '+';
-                
                 updateCartItemQuantity(itemIdentifier, isIncrease);
             }
 
-            // Selectores de método de pago
             if (e.target.closest('.payment-option')) {
                 const option = e.target.closest('.payment-option');
                 selectPaymentMethod(option.dataset.method);
             }
             
-            // Botones de editar producto en el carrito
             if (e.target.closest('.cart-item-edit')) {
                 e.preventDefault();
                 const btn = e.target.closest('.cart-item-edit');
                 editCartItem(btn.dataset.identifier);
             }
 
-            // Botones de eliminar producto en el carrito
             if (e.target.closest('.cart-item-remove')) {
                 e.preventDefault();
                 const btn = e.target.closest('.cart-item-remove');
@@ -220,66 +200,43 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // --- Animación del logo ---
     function setupLogoAnimation() {
         const logo = document.getElementById('logo');
         if (logo) {
-            logo.addEventListener('mouseenter', () => {
-                logo.style.transform = 'scale(1.1)';
-            });
-            
-            logo.addEventListener('mouseleave', () => {
-                logo.style.transform = 'scale(1)';
-            });
-            
+            logo.addEventListener('mouseenter', () => { logo.style.transform = 'scale(1.1)'; });
+            logo.addEventListener('mouseleave', () => { logo.style.transform = 'scale(1)'; });
             logo.addEventListener('click', () => {
                 logo.style.transform = 'scale(1.15)';
-                setTimeout(() => {
-                    logo.style.transform = 'scale(1)';
-                }, 300);
+                setTimeout(() => { logo.style.transform = 'scale(1)'; }, 300);
             });
         }
     }
 
-    // --- NUEVA FUNCIÓN PARA ZOOM CON MOUSE ---
     function setupImageZoom() {
         const zoomContainer = document.querySelector('.modal-left');
         const zoomImage = document.getElementById('modal-img');
 
-        if (!zoomContainer || !zoomImage) {
-            // Si no están los elementos, no hacer nada
-            return;
-        }
+        if (!zoomContainer || !zoomImage) return;
 
-        // 1. Cuando el mouse se mueve sobre el contenedor
         zoomContainer.addEventListener('mousemove', (e) => {
             const rect = zoomContainer.getBoundingClientRect();
             const x = e.clientX - rect.left;
             const y = e.clientY - rect.top;
-
-            // Convertir la posición del mouse en porcentaje (0% a 100%)
             const xPercent = (x / rect.width) * 100;
             const yPercent = (y / rect.height) * 100;
-
-            // Mover el "origen" del zoom a la posición del mouse
             zoomImage.style.transformOrigin = `${xPercent}% ${yPercent}%`;
         });
 
-        // 2. Cuando el mouse entra en el contenedor
         zoomContainer.addEventListener('mouseenter', () => {
-            // Aplicar el zoom x2 (puedes cambiar este '2' por '1.5' o '2.5')
             zoomImage.style.transform = 'scale(1.7)';
         });
 
-        // 3. Cuando el mouse sale del contenedor
         zoomContainer.addEventListener('mouseleave', () => {
-            // Quitar el zoom y volver a centrar
             zoomImage.style.transform = 'scale(1)';
             zoomImage.style.transformOrigin = 'center center';
         });
     }
 
-    // --- Funciones de cantidad ---
     function decreaseQuantity() {
         if (currentQuantity > 1) {
             currentQuantity--;
@@ -311,39 +268,30 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // --- Funciones de método de pago ---
     function setupPaymentMethods() {
-        // Seleccionar WhatsApp por defecto
         selectPaymentMethod('whatsapp');
     }
 
     function selectPaymentMethod(method) {
         selectedPaymentMethod = method;
-        
-        // Actualizar UI
         document.querySelectorAll('.payment-option').forEach(option => {
             option.classList.remove('selected');
         });
-        
         const selectedOption = document.querySelector(`.payment-option[data-method="${method}"]`);
         if (selectedOption) {
             selectedOption.classList.add('selected');
         }
-        
         updateCheckoutButton();
     }
 
     function updateCheckoutButton() {
         if (!checkoutBtn) return;
-        
         const hasItems = cart.length > 0;
         const hasPaymentMethod = selectedPaymentMethod !== '';
         
         if (hasItems && hasPaymentMethod) {
             checkoutBtn.disabled = false;
             checkoutBtn.classList.remove('checkout-disabled');
-            
-            // Actualizar texto y estilo según método seleccionado
             if (selectedPaymentMethod === 'whatsapp') {
                 checkoutBtn.textContent = 'Finalizar Pedido por WhatsApp';
                 checkoutBtn.className = 'btn-checkout btn-checkout-whatsapp';
@@ -358,14 +306,11 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
     
-    // --- Funcionalidad de búsqueda ---
     function filterProducts() {
         const searchTerm = searchInput.value.toLowerCase();
         const productCards = document.querySelectorAll('.product-card');
-        
         productCards.forEach(card => {
             const productName = card.querySelector('h3').textContent.toLowerCase();
-            
             if (productName.includes(searchTerm)) {
                 card.style.display = 'block';
                 card.classList.add('fade-in');
@@ -375,16 +320,10 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
     
-    // --- Funcionalidad de filtrado por categoría ---
     function filterByCategory(e) {
         const category = e.target.dataset.category;
-        
-        // Actualizar botones activos
-        filterButtons.forEach(btn => {
-            btn.classList.remove('active');
-        });
+        filterButtons.forEach(btn => { btn.classList.remove('active'); });
         e.target.classList.add('active');
-        
         const productCards = document.querySelectorAll('.product-card');
         
         if (category === 'all') {
@@ -395,7 +334,6 @@ document.addEventListener("DOMContentLoaded", () => {
         } else {
             productCards.forEach(card => {
                 const productCategory = card.dataset.category;
-                
                 if (productCategory === category) {
                     card.style.display = 'block';
                     card.classList.add('fade-in');
@@ -406,58 +344,41 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
     
-    // --- Funcionalidad de favoritos ---
     function toggleFavorite(name, price, img, button) {
         const existingIndex = favorites.findIndex(item => item.name === name);
-        
         if (existingIndex !== -1) {
-            // Quitar de favoritos
             favorites.splice(existingIndex, 1);
             button.classList.remove('active');
             showFavoritesMessage('Producto eliminado de favoritos');
         } else {
-            // Agregar a favoritos
             favorites.push({ name, price, img });
             button.classList.add('active');
             showFavoritesMessage('Producto agregado a favoritos');
         }
-        
         saveFavoritesToStorage();
     }
     
-    // Mostrar mensaje de favoritos
     function showFavoritesMessage(message) {
         if (favoritesMessage) {
             favoritesMessage.textContent = message;
             favoritesMessage.classList.add('show');
-            
-            setTimeout(() => {
-                favoritesMessage.classList.remove('show');
-            }, 2000);
+            setTimeout(() => { favoritesMessage.classList.remove('show'); }, 2000);
         }
     }
     
-    // --- Funcionalidad del carrito ---
     function addToCart(name, price, img, details = '', quantity = 1, size = '', packaging = '') {
-        console.log('🛒 addToCart llamado con:', {
-            name, price, details, quantity, size, packaging
-        });
-        
         let optimizedImg = img;
         if (img && img.startsWith('data:image')) {
             optimizedImg = 'imagenes/personalizado.jpg';
         }
 
-        // Crear un identificador único para el item
         const itemIdentifier = name + size + packaging;
         
-        // Si estamos editando, actualizar el producto existente
         if (isEditingCartItem) {
-            console.log('✏️ Editando producto existente:', editingCartItemName);
             const itemIndex = cart.findIndex(item => item.identifier === editingCartItemName);
             if (itemIndex !== -1) {
                 cart[itemIndex] = {
-                    ...cart[itemIndex], // Mantener datos antiguos si no se proveen
+                    ...cart[itemIndex],
                     name: name,
                     price: price,
                     img: optimizedImg,
@@ -465,29 +386,16 @@ document.addEventListener("DOMContentLoaded", () => {
                     quantity: quantity,
                     size: size,
                     packaging: packaging,
-                    identifier: itemIdentifier // Actualizar identificador
+                    identifier: itemIdentifier
                 };
-                
-                // Resetear estado de edición
                 isEditingCartItem = false;
                 editingCartItemName = "";
-                console.log('✅ Producto editado exitosamente');
-            } else {
-                console.log('❌ No se encontró producto para editar con identifier:', editingCartItemName);
             }
         } else {
-            // Buscar si ya existe un producto con el mismo ID único
-            const existingIndex = cart.findIndex(item => 
-                item.identifier === itemIdentifier
-            );
-            
+            const existingIndex = cart.findIndex(item => item.identifier === itemIdentifier);
             if (existingIndex !== -1) {
-                // Actualizar cantidad si ya existe
-                console.log('📦 Producto existente, actualizando cantidad');
                 cart[existingIndex].quantity += quantity;
             } else {
-                // Agregar nuevo producto
-                console.log('🆕 Agregando nuevo producto al carrito');
                 cart.push({
                     name,
                     price,
@@ -496,30 +404,24 @@ document.addEventListener("DOMContentLoaded", () => {
                     quantity: quantity,
                     size: size,
                     packaging: packaging,
-                    identifier: itemIdentifier // Guardar identificador
+                    identifier: itemIdentifier
                 });
             }
         }
-        
-        console.log('🛒 Carrito actual:', cart);
         
         saveCartToStorage();
         updateCartCounter();
         updateCartDisplay();
         updateCheckoutButton();
         
-        // Animación del contador
         if (cartCounter) {
             cartCounter.classList.add('pulse');
-            setTimeout(() => {
-                cartCounter.classList.remove('pulse');
-            }, 1000);
+            setTimeout(() => { cartCounter.classList.remove('pulse'); }, 1000);
         }
     }
 
     function updateCartItemQuantity(itemIdentifier, isIncrease) {
         const itemIndex = cart.findIndex(item => item.identifier === itemIdentifier);
-        
         if (itemIndex !== -1) {
             if (isIncrease) {
                 cart[itemIndex].quantity += 1;
@@ -527,11 +429,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (cart[itemIndex].quantity > 1) {
                     cart[itemIndex].quantity -= 1;
                 } else {
-                    // Eliminar si la cantidad llega a 0
                     cart.splice(itemIndex, 1);
                 }
             }
-            
             saveCartToStorage();
             updateCartCounter();
             updateCartDisplay();
@@ -547,16 +447,13 @@ document.addEventListener("DOMContentLoaded", () => {
         updateCheckoutButton();
     }
     
-    // --- Función para abrir/cerrar carrito ---
     function toggleCart(forceClose = false) {
         if (cartSidebar && overlay) {
             if (forceClose) {
-                // Forzar cierre
                 cartSidebar.classList.remove('active');
                 overlay.classList.remove('active');
                 document.body.style.overflow = '';
             } else {
-                // Toggle normal
                 cartSidebar.classList.toggle('active');
                 overlay.classList.toggle('active');
                 document.body.style.overflow = cartSidebar.classList.contains('active') ? 'hidden' : '';
@@ -564,18 +461,12 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
     
-    // --- Función para editar producto en el carrito ---
     function editCartItem(itemIdentifier) {
         const item = cart.find(item => item.identifier === itemIdentifier);
-        
         if (item) {
-            // Cerrar el carrito primero
-            toggleCart(true); // true para forzar cierre
-            
-            // Buscar el botón de vista correspondiente en la página
+            toggleCart(true);
             const productCards = document.querySelectorAll('.product-card');
             let viewBtn = null;
-            
             productCards.forEach(card => {
                 if (card.querySelector('h3').textContent === item.name) {
                     viewBtn = card.querySelector('.view-btn');
@@ -583,33 +474,31 @@ document.addEventListener("DOMContentLoaded", () => {
             });
             
             if (viewBtn) {
-                // Configurar estado de edición
                 isEditingCartItem = true;
-                editingCartItemName = itemIdentifier; // Usar el identifier
-                
-                // Abrir el modal con el producto después de un pequeño delay
+                editingCartItemName = itemIdentifier;
                 setTimeout(() => {
                     viewBtn.click();
-                    
-                    // Pre-cargar los valores actuales del producto
                     setTimeout(() => {
-                        // --- LÓGICA DE PRE-CARGA MODIFICADA ---
+                        // --- LÓGICA DE PRE-CARGA (INCLUYE 'NONE') ---
                         if (item.size && item.size !== "No especificado") {
-                            // Intentar encontrar el valor en el select
                             let foundInSelect = false;
                             if (modalSizeSelect) {
-                                for (let option of modalSizeSelect.options) {
-                                    if (option.value === item.size) {
-                                        option.selected = true;
-                                        foundInSelect = true;
-                                        break;
+                                // Caso especial: 'N/A' o 'none'
+                                if (item.size === 'N/A' && currentSizeConfig.type === 'none') {
+                                    modalSizeSelect.value = 'none';
+                                    foundInSelect = true;
+                                } else {
+                                    for (let option of modalSizeSelect.options) {
+                                        if (option.value === item.size) {
+                                            option.selected = true;
+                                            foundInSelect = true;
+                                            break;
+                                        }
                                     }
                                 }
                             }
-                            
-                            // Si no se encontró, es un tamaño personalizado
-                            if (!foundInSelect && modalSizeSelect) {
-                                modalSizeSelect.value = "custom"; // Seleccionar "Otro"
+                            if (!foundInSelect && modalSizeSelect && currentSizeConfig.type !== 'none') {
+                                modalSizeSelect.value = "custom";
                                 if (modalSizeCustomText) modalSizeCustomText.value = item.size;
                                 if (modalSizeCustomContainer) modalSizeCustomContainer.style.display = 'block';
                             }
@@ -626,15 +515,12 @@ document.addEventListener("DOMContentLoaded", () => {
                             updateQuantityDisplay();
                         }
                         
-                        // Actualizar el texto del botón
                         if (modalAddToCartBtn) {
                             modalAddToCartBtn.textContent = '🛒 Actualizar Producto';
                         }
-                        // Re-validar el botón
                         updateAddToCartButton(); 
-
                     }, 100);
-                }, 300); // Pequeño delay para que se cierre el carrito primero
+                }, 300);
             }
         }
     }
@@ -649,9 +535,7 @@ document.addEventListener("DOMContentLoaded", () => {
     
     function updateCartDisplay() {
         if (!cartItemsContainer) return;
-        
         cartItemsContainer.innerHTML = '';
-        
         if (cart.length === 0) {
             cartItemsContainer.innerHTML = '<p class="empty-cart">Tu carrito está vacío</p>';
             if (cartTotalElement) cartTotalElement.textContent = '$0.00';
@@ -659,21 +543,17 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         
         let total = 0;
-        
         cart.forEach(item => {
             const itemElement = document.createElement('div');
             itemElement.className = 'cart-item';
-            // Guardar el identifier en el elemento para los botones
             itemElement.dataset.identifier = item.identifier;
-            
-            // Calcular precio numérico
             const priceValue = parseFloat(item.price.replace('$', '')) || 0;
             const itemTotal = priceValue * item.quantity;
             total += itemTotal;
             
-            // Crear descripción unificada
             let description = '';
-            if (item.size && item.size !== "No especificado") {
+            // Solo mostrar tamaño si no es N/A
+            if (item.size && item.size !== "No especificado" && item.size !== "N/A") {
                 description += `<div class="cart-item-detail"><strong>Tamaño:</strong> ${item.size}</div>`;
             }
             if (item.packaging && item.packaging !== "No especificado") {
@@ -684,9 +564,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 <img src="${item.img}" alt="${item.name}">
                 <div class="cart-item-info">
                     <div class="cart-item-name">${item.name}</div>
-                    <div class="cart-item-details">
-                        ${description}
-                    </div>
+                    <div class="cart-item-details">${description}</div>
                     <div class="cart-item-price">${item.price} c/u</div>
                     <div class="cart-item-controls">
                         <button class="cart-quantity-btn">-</button>
@@ -697,13 +575,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 </div>
                 <button class="cart-item-remove" data-identifier="${item.identifier}">&times;</button>
             `;
-            
             cartItemsContainer.appendChild(itemElement);
         });
         
         if (cartTotalElement) cartTotalElement.textContent = `$${total.toFixed(2)}`;
-        
-        // Los listeners ahora se manejan por delegación en setupEventListeners
     }
     
     function proceedToCheckout() {
@@ -711,17 +586,16 @@ document.addEventListener("DOMContentLoaded", () => {
             alert('Tu carrito está vacío');
             return;
         }
-
         if (!selectedPaymentMethod) {
             alert('Por favor selecciona un método de contacto');
             return;
         }
         
         let message = "¡Hola! Me interesan los siguientes productos:\n\n";
-        
         cart.forEach(item => {
             message += `• ${item.name} - ${item.price} x ${item.quantity}\n`;
-            if (item.size && item.size !== "No especificado") {
+            // Modificado: no mostrar N/A en el mensaje
+            if (item.size && item.size !== "No especificado" && item.size !== "N/A") {
                 message += `  Tamaño: ${item.size}\n`;
             }
             if (item.packaging && item.packaging !== "No especificado") {
@@ -738,7 +612,6 @@ document.addEventListener("DOMContentLoaded", () => {
             const waLink = `https://wa.me/${waNumber}?text=${encodedMessage}`;
             window.open(waLink, '_blank');
         } else {
-            // Instagram - copiar al portapapeles
             try {
                 navigator.clipboard.writeText(message);
                 alert("✅ Se ha copiado tu pedido al portapapeles. Ahora abre Instagram y pégalo en nuestro chat @tejidosdelight");
@@ -749,37 +622,26 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }
         
-        // Limpiar carrito después del pedido
         cart = [];
         saveCartToStorage();
         updateCartCounter();
         updateCartDisplay();
         updateCheckoutButton();
-        toggleCart(true); // Cerrar carrito después del pedido
+        toggleCart(true);
     }
     
-    // --- Almacenamiento local ---
     function saveCartToStorage() {
         try {
             const cartToSave = cart.map(item => ({
                 ...item,
                 img: item.img && item.img.startsWith('data:image') ? 'imagenes/personalizado.jpg' : item.img
             }));
-            
             localStorage.setItem('tejidosDelightCart', JSON.stringify(cartToSave));
-            console.log('💾 Carrito guardado exitosamente');
         } catch (error) {
-            console.error('❌ Error guardando carrito:', error);
             if (error.name === 'QuotaExceededError') {
-                console.warn('⚠️ localStorage lleno, limpiando carrito antiguo');
                 localStorage.removeItem('tejidosDelightCart');
                 const limitedCart = cart.slice(-5);
-                try {
-                    localStorage.setItem('tejidosDelightCart', JSON.stringify(limitedCart));
-                    console.log('💾 Carrito limitado guardado (últimos 5 items)');
-                } catch (e) {
-                    console.error('❌ No se pudo guardar el carrito incluso limitado');
-                }
+                localStorage.setItem('tejidosDelightCart', JSON.stringify(limitedCart));
             }
         }
     }
@@ -794,15 +656,12 @@ document.addEventListener("DOMContentLoaded", () => {
                     if (!item.img || item.img.startsWith('data:image')) {
                         item.img = 'imagenes/personalizado.jpg';
                     }
-                    // Asegurar que cada item tenga un 'identifier'
                     if (!item.identifier) {
                         item.identifier = item.name + (item.size || '') + (item.packaging || '');
                     }
                 });
-                console.log('📥 Carrito cargado:', cart.length, 'productos');
             }
         } catch (e) {
-            console.error('❌ Error loading cart:', e);
             cart = [];
             localStorage.removeItem('tejidosDelightCart');
         }
@@ -826,7 +685,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
     
-    // --- Funciones del modal ---
+    // --- FUNCIONES DEL MODAL (MODIFICADAS PARA 'NONE') ---
     function openModal(event) {
         event.preventDefault(); 
         const link = this; 
@@ -842,91 +701,79 @@ document.addEventListener("DOMContentLoaded", () => {
         try { currentSizeConfig = JSON.parse(link.dataset.sizeConfig || '{}'); } catch (e) { currentSizeConfig = {}; }
         try { currentPackagingConfig = JSON.parse(link.dataset.packagingConfig || '{}'); } catch (e) { currentPackagingConfig = {}; }
         
-        // Asegurar valores mínimos
-        if (!currentSizeConfig.type) { currentSizeConfig.type = 'customizable'; }
-        if (!currentSizeConfig.options) { currentSizeConfig.options = ['10cm', '15cm', '20cm']; }
-        if (!currentSizeConfig.defaultValue) { currentSizeConfig.defaultValue = currentSizeConfig.options[0]; }
-        if (!currentPackagingConfig.type) { currentPackagingConfig.type = 'customizable'; }
-        if (!currentPackagingConfig.options) { currentPackagingConfig.options = ['Caja con visor', 'Bolsa de papel']; }
-        if (!currentPackagingConfig.defaultValue) { currentPackagingConfig.defaultValue = currentPackagingConfig.options[0]; }
-        
-        // --- LÓGICA DE TAMAÑO (MODIFICADA) ---
+        // --- LÓGICA DE TAMAÑO ---
         if (formSizeStandard && modalSizeSelect) {
-            formSizeStandard.style.display = 'block';
-            
-            // 1. Limpiar el select y el input de texto
-            modalSizeSelect.innerHTML = '<option value="" disabled selected>Selecciona una opción...</option>';
-            modalSizeCustomText.value = '';
             modalSizeCustomContainer.style.display = 'none';
+            modalSizeCustomText.value = '';
+            
+            // CASO 1: NO APLICA TAMAÑO
+            if (currentSizeConfig.type === 'none') {
+                formSizeStandard.style.display = 'none'; // Ocultar selector
+                modalSizeSelect.innerHTML = '<option value="none" selected>N/A</option>'; // Valor interno dummy
+                modalSizeSelect.value = 'none';
+            } 
+            // CASO 2: SÍ APLICA TAMAÑO
+            else {
+                formSizeStandard.style.display = 'block';
+                modalSizeSelect.innerHTML = '<option value="" disabled selected>Selecciona una opción...</option>';
 
-            // 2. Llenar el select con las opciones del producto
-            if (currentSizeConfig.type === 'fixed') {
-                // Si es fijo, solo poner esa opción
-                const optionElement = document.createElement('option');
-                optionElement.value = currentSizeConfig.value || "Tamaño único";
-                optionElement.textContent = currentSizeConfig.value || "Tamaño único";
-                modalSizeSelect.appendChild(optionElement);
-                modalSizeSelect.value = optionElement.value; // Seleccionarlo
-            } else {
-                // Si es personalizable, poner las opciones
-                if (currentSizeConfig.options && currentSizeConfig.options.length > 0) {
-                    currentSizeConfig.options.forEach(option => {
-                        const optionElement = document.createElement('option');
-                        optionElement.value = option;
-                        optionElement.textContent = option;
-                        modalSizeSelect.appendChild(optionElement);
-                    });
-                }
-                 // 3. (CLAVE) Solo añadir "Personalizado" si el tipo de producto es "custom"
-                if (currentProductType === 'custom') {
-                    const customOption = document.createElement('option');
-                    customOption.value = "custom"; // Valor especial
-                    customOption.textContent = "Otro (Personalizado)";
-                    modalSizeSelect.appendChild(customOption);
-                }
-            }
-
-            // 4. Seleccionar valor por defecto si no es fijo
-            if (currentSizeConfig.type !== 'fixed' && currentSizeConfig.defaultValue) {
-                // Asegurarse de que el defaultValue exista como opción
-                let optionExists = false;
-                for (let option of modalSizeSelect.options) {
-                    if (option.value === currentSizeConfig.defaultValue) {
-                        optionExists = true;
-                        break;
+                if (currentSizeConfig.type === 'fixed') {
+                    const optionElement = document.createElement('option');
+                    optionElement.value = currentSizeConfig.value || "Tamaño único";
+                    optionElement.textContent = currentSizeConfig.value || "Tamaño único";
+                    modalSizeSelect.appendChild(optionElement);
+                    modalSizeSelect.value = optionElement.value;
+                } else {
+                    if (currentSizeConfig.options) {
+                        currentSizeConfig.options.forEach(option => {
+                            const optionElement = document.createElement('option');
+                            optionElement.value = option;
+                            optionElement.textContent = option;
+                            modalSizeSelect.appendChild(optionElement);
+                        });
+                    }
+                    if (currentProductType === 'custom') {
+                        const customOption = document.createElement('option');
+                        customOption.value = "custom";
+                        customOption.textContent = "Otro (Personalizado)";
+                        modalSizeSelect.appendChild(customOption);
                     }
                 }
-                if (optionExists) {
-                    modalSizeSelect.value = currentSizeConfig.defaultValue;
+                
+                if (currentSizeConfig.type !== 'fixed' && currentSizeConfig.defaultValue) {
+                    let optionExists = false;
+                    for (let option of modalSizeSelect.options) {
+                        if (option.value === currentSizeConfig.defaultValue) {
+                            optionExists = true;
+                            break;
+                        }
+                    }
+                    if (optionExists) {
+                        modalSizeSelect.value = currentSizeConfig.defaultValue;
+                    }
                 }
             }
 
-            // 5. Añadir listener para mostrar/ocultar el input de texto
             modalSizeSelect.onchange = () => {
                 if (modalSizeSelect.value === 'custom') {
                     modalSizeCustomContainer.style.display = 'block';
                 } else {
                     modalSizeCustomContainer.style.display = 'none';
                 }
-                updateAddToCartButton(); // Validar al cambiar
+                updateAddToCartButton();
             };
         }
         
-        if (formSizeCustom) formSizeCustom.style.display = 'none'; // Ocultar el formulario antiguo
+        if (formSizeCustom) formSizeCustom.style.display = 'none';
 
-        
-        // --- Configurar formulario de empaque ---
         if (modalPackagingSelect) {
             modalPackagingSelect.innerHTML = '<option value="" disabled selected>Selecciona una opción...</option>';
-            
             if (currentPackagingConfig.type === 'fixed') {
-                // Empaque fijo
                 modalPackagingSelect.innerHTML = `<option value="${currentPackagingConfig.value}" selected>${currentPackagingConfig.value}</option>`;
                 modalPackagingSelect.disabled = true;
             } else {
-                // Empaque personalizable
                 modalPackagingSelect.disabled = false;
-                if (currentPackagingConfig.options && currentPackagingConfig.options.length > 0) {
+                if (currentPackagingConfig.options) {
                     currentPackagingConfig.options.forEach(option => {
                         const optionElement = document.createElement('option');
                         optionElement.value = option;
@@ -940,18 +787,10 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }
         
-        // Resetear cantidad
         updateQuantityDisplay();
-        
-        // Remover highlights de error
         removeErrorHighlights();
+        document.querySelectorAll('.error-message').forEach(error => { error.style.display = 'none'; });
         
-        // Ocultar mensajes de error
-        document.querySelectorAll('.error-message').forEach(error => {
-            error.style.display = 'none';
-        });
-        
-        // --- Lógica condicional para mostrar/ocultar ---
         if (formPackaging) formPackaging.style.display = 'block';
 
         if (currentProductType === 'custom') {
@@ -962,14 +801,11 @@ document.addEventListener("DOMContentLoaded", () => {
             if (instructionsCustom) instructionsCustom.style.display = 'none';
         }
         
-        // Si no estamos editando, resetear el texto del botón
         if (!isEditingCartItem && modalAddToCartBtn) {
             modalAddToCartBtn.textContent = '🛒 Añadir al Carrito';
         }
         
-        // Actualizar estado del botón
         setTimeout(updateAddToCartButton, 100);
-        
         modalOverlay.style.display = 'flex';
         document.body.style.overflow = 'hidden';
     }
@@ -977,58 +813,41 @@ document.addEventListener("DOMContentLoaded", () => {
     function closeModal() {
         modalOverlay.style.display = 'none';
         document.body.style.overflow = '';
-        
-        // Resetear estado de edición al cerrar el modal
         isEditingCartItem = false;
         editingCartItemName = "";
     }
 
-    // --- FUNCIÓN toggleCustomSize ELIMINADA (ya no se usa) ---
-    
-    // --- Función para validar formulario ---
     function validateForm() {
-        console.log('🔍 Validando formulario...');
         let isValid = true;
-        
-        // Remover highlights anteriores
         removeErrorHighlights();
+        document.querySelectorAll('.error-message').forEach(error => { error.style.display = 'none'; });
         
-        // Ocultar mensajes de error anteriores
-        document.querySelectorAll('.error-message').forEach(error => {
-            error.style.display = 'none';
-        });
-        
-        // Validar tamaño (MODIFICADO)
         const sizeValue = modalSizeSelect.value;
-        if (!sizeValue) {
-            isValid = false;
-            document.getElementById('error-size-standard').style.display = 'block';
-            modalSizeSelect.classList.add('error-highlight');
-        } else if (sizeValue === 'custom') {
-            const customText = modalSizeCustomText.value.trim();
-            if (!customText) {
+        
+        // Validar tamaño SOLO si aplica
+        if (currentSizeConfig.type !== 'none') {
+            if (!sizeValue || sizeValue === '') {
                 isValid = false;
-                document.getElementById('error-size-custom-text').style.display = 'block';
-                modalSizeCustomText.classList.add('error-highlight');
+                document.getElementById('error-size-standard').style.display = 'block';
+                modalSizeSelect.classList.add('error-highlight');
+            } else if (sizeValue === 'custom') {
+                const customText = modalSizeCustomText.value.trim();
+                if (!customText) {
+                    isValid = false;
+                    document.getElementById('error-size-custom-text').style.display = 'block';
+                    modalSizeCustomText.classList.add('error-highlight');
+                }
             }
         }
         
-        // Validar empaque
         const packaging = modalPackagingSelect ? modalPackagingSelect.value : '';
-        console.log('📦 Empaque seleccionado:', packaging);
-        
         if (!packaging) {
-            console.log('❌ No se seleccionó empaque');
             const errorElement = document.getElementById('error-packaging');
-            if (errorElement) {
-                errorElement.style.display = 'block';
-                errorElement.textContent = 'Por favor selecciona un tipo de empaque';
-            }
-            if (modalPackagingSelect) modalPackagingSelect.classList.add('error-highlight');
+            if (errorElement) errorElement.style.display = 'block';
+            modalPackagingSelect.classList.add('error-highlight');
             isValid = false;
         }
         
-        console.log('🎯 Resultado validación:', isValid ? '✅ VÁLIDO' : '❌ INVÁLIDO');
         return isValid;
     }
 
@@ -1038,40 +857,21 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // --- Función para añadir al carrito desde el modal ---
     function addToCartFromModal() {
-        console.log('🔴 addToCartFromModal llamado');
-        
         if (!validateForm()) {
-            console.log('❌ Validación falló');
             showFavoritesMessage('Por favor completa todos los campos requeridos');
             return; 
         }
         
-        console.log('✅ Validación pasó');
-        
         const { size, packaging } = getFormData();
-        console.log('📦 Datos del formulario:', { size, packaging });
-        
-        const productDetails = `
-        Tamaño: ${size}
-        Empaque: ${packaging}
-        `.trim();
-        
-        console.log('🛒 Llamando a addToCart con:', {
-            name: currentProductName,
-            price: modalPrice.textContent,
-            details: productDetails,
-            quantity: currentQuantity,
-            size: size,
-            packaging: packaging
-        });
+        let productDetails = `Empaque: ${packaging}`;
+        if (size !== 'N/A') {
+            productDetails = `Tamaño: ${size}\n${productDetails}`;
+        }
         
         addToCart(currentProductName, modalPrice.textContent, modalImg.src, productDetails, currentQuantity, size, packaging);
         
-        // Mostrar confirmación
         if (modalAddToCartBtn) {
-            console.log('✅ Producto agregado, mostrando confirmación');
             const originalText = isEditingCartItem ? '🛒 Actualizar Producto' : '🛒 Añadir al Carrito';
             const successText = isEditingCartItem ? '✓ Producto Actualizado' : '✓ Producto Añadido';
             modalAddToCartBtn.innerHTML = successText;
@@ -1087,79 +887,73 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
     
-    // --- Función para actualizar estado del botón ---
     function updateAddToCartButton() {
-        console.log('🔄 Actualizando botón añadir al carrito');
-        
         if (modalAddToCartBtn) {
-            // Habilitar/deshabilitar basado en validación básica (MODIFICADO)
             const packaging = modalPackagingSelect ? modalPackagingSelect.value : '';
             const sizeValue = modalSizeSelect ? modalSizeSelect.value : '';
             let sizeValid = false;
     
-            if (sizeValue === 'custom') {
+            // Si no aplica tamaño, siempre es válido
+            if (currentSizeConfig.type === 'none') {
+                sizeValid = true;
+            } else if (sizeValue === 'custom') {
                 sizeValid = modalSizeCustomText.value.trim() !== '';
             } else if (sizeValue !== '') {
                 sizeValid = true;
             }
             
-            const isEnabled = sizeValid && !!packaging; // Usar !!packaging para convertir a booleano
-            console.log('🎯 Estado del botón:', isEnabled ? '✅ HABILITADO' : '❌ DESHABILITADO', {
-                sizeValid,
-                packaging: packaging || 'NO SELECCIONADO'
-            });
-            
+            const isEnabled = sizeValid && !!packaging;
             modalAddToCartBtn.disabled = !isEnabled;
         }
     }
     
     function getFormData() {
-        console.log('📋 Obteniendo datos del formulario...');
         let size = "No especificado";
         let packaging = "No especificado";
 
-        // 1. Obtener TAMAÑO (MODIFICADO)
-        const sizeValue = modalSizeSelect.value;
-        if (sizeValue === 'custom') {
-            size = modalSizeCustomText.value.trim() || "Personalizado (No descrito)";
-        } else if (sizeValue) {
-            size = sizeValue;
+        // Obtener TAMAÑO
+        if (currentSizeConfig.type === 'none') {
+            size = "N/A";
+        } else {
+            const sizeValue = modalSizeSelect.value;
+            if (sizeValue === 'custom') {
+                size = modalSizeCustomText.value.trim() || "Personalizado (No descrito)";
+            } else if (sizeValue) {
+                size = sizeValue;
+            }
         }
         
-        // 2. Obtener EMPAQUE
         packaging = modalPackagingSelect ? modalPackagingSelect.value || "No especificado" : "No especificado";
-        console.log('📦 Empaque:', packaging);
-        
-        console.log('📊 Datos finales:', { size, packaging });
         return { size, packaging };
     }
 
     function sendWhatsApp() {
-        // Validar formulario antes de enviar
         if (!validateForm()) {
             showFavoritesMessage('Por favor completa todos los campos requeridos');
             return;
         }
         
         const { size, packaging } = getFormData();
+        let baseMessage = `¡Hola! Me interesa el producto: *${currentProductName}*.\n\n`;
+        if (size !== 'N/A') baseMessage += `*Tamaño:* ${size}\n`;
+        baseMessage += `*Empaque:* ${packaging}\n*Cantidad:* ${currentQuantity}\n\nQuedo atento/a a la cotización. ¡Gracias!`;
         
-        const baseMessage = `¡Hola! Me interesa el producto: *${currentProductName}*.\n\n*Tamaño:* ${size}\n*Empaque:* ${packaging}\n\Dosificación:* ${currentQuantity}\n\nQuedo atento/a a la cotización. ¡Gracias!`;
         const encodedMessage = encodeURIComponent(baseMessage);
         const waNumber = "593999406153";
-        
         const waLink = `https://wa.me/${waNumber}?text=${encodedMessage}`;
         window.open(waLink, '_blank');
     }
 
     function sendInstagram() {
-        // Validar formulario antes de enviar
         if (!validateForm()) {
             showFavoritesMessage('Por favor completa todos los campos requeridos');
             return;
         }
         
         const { size, packaging } = getFormData();
-        const message = `¡Hola! Me interesa el producto: ${currentProductName}.\n\nTamaño: ${size}\nEmpaque: ${packaging}\nCantidad: ${currentQuantity}\n\nQuedo atento/a a la cotización. ¡Gracias!`;
+        let message = `¡Hola! Me interesa el producto: ${currentProductName}.\n\n`;
+        if (size !== 'N/A') message += `Tamaño: ${size}\n`;
+        message += `Empaque: ${packaging}\nCantidad: ${currentQuantity}\n\nQuedo atento/a a la cotización. ¡Gracias!`;
 
         try {
             navigator.clipboard.writeText(message);
@@ -1172,15 +966,12 @@ document.addEventListener("DOMContentLoaded", () => {
         window.open(igLink, '_blank');
     }
     
-    // Hacer funciones globales para que products-loader.js pueda acceder a ellas
     window.openModal = openModal;
     window.toggleFavorite = toggleFavorite;
     
-    // Inicializar la aplicación
     init();
 });
 
-// Función para limpiar localStorage manually (útil para debugging)
 function clearStorage() {
     localStorage.clear();
     cart = [];
@@ -1189,10 +980,6 @@ function clearStorage() {
     updateCartDisplay();
     console.log('🧹 localStorage limpiado');
     showFavoritesMessage('Storage limpiado - página se recargará');
-    setTimeout(() => {
-        location.reload();
-    }, 1000);
+    setTimeout(() => { location.reload(); }, 1000);
 }
-
-// Hacerla disponible globalmente para debugging
 window.clearStorage = clearStorage;
