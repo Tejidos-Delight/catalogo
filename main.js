@@ -183,44 +183,48 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // --- SLIDER DEL HERO (Cada 4s) ---
+        // --- CARRUSEL HERO ---
     function initHeroSlider() {
-        const heroImg = document.querySelector('.main-product-img');
+        const heroImg = document.getElementById('hero-image');
         if (!heroImg) return; // Solo se ejecuta en index.html
 
-        // Imágenes de las categorías
-        const images = [
-            'imagenes/amigurumis.jpg',
-            'imagenes/flores.jpg', // Asumiendo nombre, ajusta si es diferente
-            'imagenes/llaveros.jpg',
-            'imagenes/pulseras.jpg',
-            'imagenes/colgantes.jpg', // Asumiendo nombre
-            'imagenes/bolsas.jpg'    // Asumiendo nombre
-        ];
-        
-        // Fallback a nombres comunes si los de arriba no existen
-        const safeImages = [
+        // Array con las imágenes de las categorías
+        const categoryImages = [
             'imagenes/amigurumis.jpg',
             'imagenes/girasol.jpg',
-            'imagenes/capibara.jpg',
+            'imagenes/capibara.jpg', 
             'imagenes/pulseras.jpg',
-            'imagenes/colgante.jpg'
+            'imagenes/colgante.jpg',
+            'imagenes/bolsahellokitty.jpg',
+            'imagenes/macetagirasol.jpg'
         ];
 
-        let index = 0;
+        let currentImageIndex = 0;
+        const transitionDuration = 1000; // 1 segundo para transición
+        const displayDuration = 4000; // 4 segundos entre cambios
 
-        setInterval(() => {
-            heroImg.style.opacity = '0'; // Fade out
+        // Configurar transición CSS
+        heroImg.style.transition = `opacity ${transitionDuration}ms ease-in-out`;
+
+        function changeHeroImage() {
+            // Fade out
+            heroImg.style.opacity = '0';
+            
             setTimeout(() => {
-                index = (index + 1) % safeImages.length;
-                heroImg.src = safeImages[index];
+                // Cambiar a la siguiente imagen
+                currentImageIndex = (currentImageIndex + 1) % categoryImages.length;
+                heroImg.src = categoryImages[currentImageIndex];
+                heroImg.alt = 'Producto Destacado ' + (currentImageIndex + 1);
                 
-                // Asegurar que cargue antes de mostrar
-                heroImg.onload = () => { heroImg.style.opacity = '1'; };
-                // Si falla (imagen no existe), pasar a la siguiente
-                heroImg.onerror = () => { index = (index + 1) % safeImages.length; heroImg.src = safeImages[index]; };
-            }, 500); 
-        }, 4000); // 4 segundos
+                // Fade in
+                setTimeout(() => {
+                    heroImg.style.opacity = '1';
+                }, 50);
+            }, transitionDuration);
+        }
+
+        // Iniciar el intervalo del carrusel
+        setInterval(changeHeroImage, displayDuration);
     }
 
     // --- LÓGICA DE CARRITO ---
