@@ -4,11 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Panel de Administración - Tejidos Delight</title>
-    <link rel="icon" type="image/png" href="imagenes/1.png">
+    <!-- En el <head> de tus páginas admin -->
+    <meta name="robots" content="noindex, nofollow, noarchive">
+    <link rel="icon" type="image/png" href="../imagenes/1.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Josefin+Sans:wght@400;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="../style.css">
     <style>
         .admin-container {
             max-width: 1200px;
@@ -270,7 +272,7 @@
 <body>
     <div id="admin-panel" style="display:none;">
     <header>
-        <img src="imagenes/1.png" alt="Catálogo Tejidos Delight" id="logo">
+        <img src="../imagenes/1.png" alt="Catálogo Tejidos Delight" id="logo">
         <p>Haciendo arte con las manos</p>
     </header>
 
@@ -284,7 +286,7 @@
             <button class="admin-btn" onclick="showSection('products')">Ver Productos</button>
             <button class="admin-btn" onclick="showSection('add-product')">Agregar Producto</button>
             <button class="admin-btn" onclick="showSection('export')">Exportar/Importar</button>
-            <button class="admin-btn" onclick="window.location.href='index.html'">Volver al Catálogo</button>
+            <button class="admin-btn" onclick="window.location.href='../index.html'">Volver al Catálogo</button>
             <button id="logout-btn" class="btn-delete" style="background-color: #c9302c; border: none; padding: 10px 15px; color: white; cursor: pointer;">
                 Cerrar Sesión
             </button>

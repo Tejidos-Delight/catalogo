@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9
+        http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
+  
+  <!-- Página Principal - MÁS IMPORTANTE -->
+  <url>
+    <loc>https://tejidos-delight.github.io/catalogo/index.html</loc>
+    <lastmod>2025-11-23</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  
+  <!-- Amigurumis - Producto principal -->
+  <url>
+    <loc>https://tejidos-delight.github.io/catalogo/amigurumis.html</loc>
+    <lastmod>2025-11-23</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  
+  <!-- Flores y Ramos -->
+  <url>
+    <loc>https://tejidos-delight.github.io/catalogo/flores.html</loc>
+    <lastmod>2025-11-23</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  
+  <!-- Llaveros -->
+  <url>
+    <loc>https://tejidos-delight.github.io/catalogo/llaveros.html</loc>
+    <lastmod>2025-11-23</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  
+  <!-- Pulseras -->
+  <url>
+    <loc>https://tejidos-delight.github.io/catalogo/pulseras.html</loc>
+    <lastmod>2025-11-23</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  
+  <!-- Colgantes -->
+  <url>
+    <loc>https://tejidos-delight.github.io/catalogo/colgantes.html</loc>
+    <lastmod>2025-11-23</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  
+  <!-- Combos Especiales -->
+  <url>
+    <loc>https://tejidos-delight.github.io/catalogo/combos.html</loc>
+    <lastmod>2025-11-23</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  
+  <!-- Bolsas -->
+  <url>
+    <loc>https://tejidos-delight.github.io/catalogo/bolsas.html</loc>
+    <lastmod>2025-11-23</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  
+  <!-- Macetas -->
+  <url>
+    <loc>https://tejidos-delight.github.io/catalogo/macetas.html</loc>
+    <lastmod>2025-11-23</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+</urlset>
