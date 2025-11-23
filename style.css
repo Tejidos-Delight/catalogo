@@ -490,3 +490,65 @@ footer { background-color: var(--secondary-color); color: #fcebe3; padding: 40px
     }
 }
 
+/* ==================================================== */
+/* ESTILOS PARA NUEVOS ICONOS SVG Y FILTRO FAVORITOS */
+/* ==================================================== */
+
+/* Iconos SVG en productos */
+.product-action-btn svg {
+    width: 20px;
+    height: 20px;
+    fill: var(--text-light);
+    transition: var(--transition);
+}
+
+.product-action-btn:hover svg {
+    fill: var(--primary-color);
+    transform: scale(1.1);
+}
+
+/* Corazón de favoritos activo - DEBE ESTAR EN ROJO */
+.favorite-btn.active svg {
+    fill: var(--primary-color) !important;
+}
+.favorite-btn.active svg use {
+    fill: var(--primary-color) !important;
+}
+
+/* Botón de favoritos en navegación */
+.nav-btn-favorites {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.nav-fav-icon {
+    width: 16px;
+    height: 16px;
+    fill: currentColor;
+}
+
+.nav-btn-favorites.active .nav-fav-icon {
+    fill: var(--white);
+}
+
+/* Tarjeta de producto favorito */
+.product-card.favorited {
+    border: 2px solid var(--primary-color);
+    background: linear-gradient(135deg, #fff5f5 0%, #ffffff 100%);
+}
+
+/* Mensaje cuando no hay favoritos */
+.no-favorites-message {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-light);
+    grid-column: 1 / -1;
+}
+
+.no-favorites-message svg {
+    width: 48px;
+    height: 48px;
+    fill: #ddd;
+    margin-bottom: 15px;
+}

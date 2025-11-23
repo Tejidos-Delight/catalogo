@@ -499,17 +499,122 @@ document.addEventListener("DOMContentLoaded", () => {
     function updateCheckoutButton() { if(!checkoutBtn) return; const ok = cart.length > 0 && selectedPaymentMethod; checkoutBtn.disabled = !ok; checkoutBtn.classList.toggle('checkout-disabled', !ok); if(ok) { checkoutBtn.className = selectedPaymentMethod === 'whatsapp' ? 'btn-checkout btn-checkout-whatsapp' : 'btn-checkout btn-checkout-instagram'; checkoutBtn.textContent = selectedPaymentMethod === 'whatsapp' ? 'Finalizar por WhatsApp' : 'Finalizar por Instagram'; } else checkoutBtn.textContent = 'Finalizar Pedido'; }
     function toggleCart(close = false) { if(close) { cartSidebar.classList.remove('active'); overlay.classList.remove('active'); document.body.style.overflow=''; } else { cartSidebar.classList.toggle('active'); overlay.classList.toggle('active'); document.body.style.overflow = cartSidebar.classList.contains('active') ? 'hidden' : ''; } }
     function filterProducts() { const term = searchInput.value.toLowerCase(); document.querySelectorAll('.product-card').forEach(c => { c.style.display = c.querySelector('h3').textContent.toLowerCase().includes(term) ? 'block' : 'none'; }); }
-    function filterByCategory(e) { const cat = e.target.dataset.category; filterButtons.forEach(b => b.classList.remove('active')); e.target.classList.add('active'); document.querySelectorAll('.product-card').forEach(c => { c.style.display = (cat === 'all' || c.dataset.category === cat) ? 'block' : 'none'; }); }
-    function toggleFavorite(name, price, img, btn) { const idx = favorites.findIndex(i => i.name === name); if(idx !== -1) { favorites.splice(idx, 1); btn.classList.remove('active'); showFavoritesMessage('Eliminado'); } else { favorites.push({name, price, img}); btn.classList.add('active'); showFavoritesMessage('Guardado'); } saveFavoritesToStorage(); }
+    // CON ESTA NUEVA VERSIÓN:
+    function filterByCategory(e) {
+        const cat = e.target.dataset.category;
+        filterButtons.forEach(b => b.classList.remove('active'));
+        e.target.classList.add('active');
+        
+        document.querySelectorAll('.product-card').forEach(c => {
+            if (cat === 'favorites') {
+                // Filtrar solo productos favoritos
+                const productName = c.querySelector('h3').textContent;
+                const isFavorite = favorites.some(fav => fav.name === productName);
+                c.style.display = isFavorite ? 'block' : 'none';
+            } else {
+                c.style.display = (cat === 'all' || c.dataset.category === cat) ? 'block' : 'none';
+            }
+        });
+        
+        // Mostrar mensaje si no hay favoritos
+        if (cat === 'favorites') {
+            showNoFavoritesMessage();
+        }
+    }
+    
+    // FUNCIÓN PARA MOSTRAR MENSAJE CUANDO NO HAY FAVORITOS
+    function showNoFavoritesMessage() {
+        const productGrid = document.querySelector('.product-grid');
+        const favoriteCards = document.querySelectorAll('.product-card[style*="display: block"]');
+        
+        if (favoriteCards.length === 0) {
+            let message = document.querySelector('.no-favorites-message');
+            if (!message) {
+                message = document.createElement('div');
+                message.className = 'no-favorites-message';
+                message.innerHTML = `
+                    <svg width="48" height="48" viewBox="0 0 24 24">
+                        <use href="#icon-heart"></use>
+                    </svg>
+                    <h3>No tienes productos favoritos aún</h3>
+                    <p>Haz clic en el corazón de los productos que te gusten</p>
+                `;
+                productGrid.appendChild(message);
+            }
+            message.style.display = 'block';
+        } else {
+            const message = document.querySelector('.no-favorites-message');
+            if (message) message.style.display = 'none';
+        }
+    }
+
+    function toggleFavorite(name, price, img, btn) {
+        const idx = favorites.findIndex(i => i.name === name);
+        const productCard = btn.closest('.product-card');
+        
+        if (idx !== -1) {
+            // Remover de favoritos
+            favorites.splice(idx, 1);
+            btn.classList.remove('active');
+            productCard.classList.remove('favorited');
+        } else {
+            // Agregar a favoritos
+            favorites.push({ name, price, img });
+            btn.classList.add('active');
+            productCard.classList.add('favorited');
+        }
+        
+        saveFavoritesToStorage();
+        
+        // Si estamos en la vista de favoritos, actualizar
+        const activeFilter = document.querySelector('.nav-btn.active');
+        if (activeFilter && activeFilter.dataset.category === 'favorites') {
+            filterByCategory({ target: activeFilter });
+        }
+    }
+
+
     function showFavoritesMessage(msg) { favoritesMessage.textContent = msg; favoritesMessage.classList.add('show'); setTimeout(() => favoritesMessage.classList.remove('show'), 2000); }
     function sendWhatsApp() { if(!validateForm()) { showFavoritesMessage('Completa campos'); return; } const {size, packaging} = getFormData(); let msg = `¡Hola! Me interesa: *${currentProductName}*\n\n`; if(size !== 'N/A') msg += `*Tam:* ${size}\n`; msg += `*Emp:* ${packaging}\n*Cant:* ${currentQuantity}`; window.open(`https://wa.me/593999406153?text=${encodeURIComponent(msg)}`, '_blank'); }
     function sendInstagram() { if(!validateForm()) { showFavoritesMessage('Completa campos'); return; } const {size, packaging} = getFormData(); let msg = `Me interesa: ${currentProductName}\n`; if(size !== 'N/A') msg += `Tam: ${size}\n`; msg += `Emp: ${packaging}\nCant: ${currentQuantity}`; navigator.clipboard.writeText(msg); alert("Copiado. Pégalo en Instagram."); window.open('https://ig.me/m/tejidosdelight', '_blank'); }
     function saveCartToStorage() { localStorage.setItem('tejidosDelightCart', JSON.stringify(cart)); }
     function loadCartFromStorage() { try { cart = JSON.parse(localStorage.getItem('tejidosDelightCart')||'[]'); cart.forEach(i => { if(!i.identifier) i.identifier = i.name + (i.size||'') + (i.packaging||''); }); } catch(e) { cart = []; } }
     function saveFavoritesToStorage() { localStorage.setItem('tejidosDelightFavorites', JSON.stringify(favorites)); }
-    function loadFavoritesFromStorage() { favorites = JSON.parse(localStorage.getItem('tejidosDelightFavorites')||'[]'); document.querySelectorAll('.product-card').forEach(c => { if(favorites.some(f => f.name === c.querySelector('h3').textContent)) c.querySelector('.favorite-btn').classList.add('active'); }); }
+    
+    function loadFavoritesFromStorage() {
+        favorites = JSON.parse(localStorage.getItem('tejidosDelightFavorites')||'[]');
+        
+        console.log('💖 Buscando favoritos entre productos...');
+        
+        // ELIMINAR EL SETTIMEOUT - aplicar inmediatamente
+        const productCards = document.querySelectorAll('.product-card');
+        console.log('📦 Productos encontrados:', productCards.length);
+        
+        productCards.forEach(card => {
+            const productName = card.querySelector('h3')?.textContent;
+            const favoriteBtn = card.querySelector('.favorite-btn');
+            
+            if (!productName || !favoriteBtn) return;
+            
+            const isFavorite = favorites.some(fav => fav.name === productName);
+            
+            if (isFavorite) {
+                favoriteBtn.classList.add('active');
+                card.classList.add('favorited');
+                console.log('✅ Marcando como favorito:', productName);
+            } else {
+                favoriteBtn.classList.remove('active');
+                card.classList.remove('favorited');
+            }
+        });
+        
+        console.log('💖 Favoritos aplicados:', favorites.length, 'productos');
+    }
+
     function updateCartCounter() { cartCounter.textContent = cart.reduce((t, i) => t + i.quantity, 0); cartCounter.style.display = cart.length > 0 ? 'flex' : 'none'; }
     window.openModal = openModal; window.toggleFavorite = toggleFavorite; window.clearStorage = () => { localStorage.clear(); location.reload(); };
     
     init();
+    // AGREGAR ESTA LÍNEA:
+    window.loadFavoritesFromStorage = loadFavoritesFromStorage;
 });

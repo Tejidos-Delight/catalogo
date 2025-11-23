@@ -122,25 +122,44 @@ async function loadAndRenderProducts() {
             productGrid.innerHTML = categoryProducts.map(product => `
                 <div class="product-card" data-category="${product.type === 'standard' ? 'estandar' : 'personalizados'}">
                     <img src="${product.image_url}" alt="${product.name}" 
-                         onerror="this.onerror=null; this.src='imagenes/personalizado.jpg'">
+                        onerror="this.onerror=null; this.src='imagenes/personalizado.jpg'">
                     <h3>${product.name}</h3>
                     <p class="precio">${product.price}</p>
                     <div class="product-actions">
-                        <button class="product-action-btn favorite-btn" title="Favorito">❤</button>
-                        <button class="product-action-btn add-to-cart-btn" title="Carrito">🛒</button>
+                        <button class="product-action-btn favorite-btn" title="Favorito">
+                            <svg width="20" height="20" viewBox="0 0 24 24">
+                                <use href="#icon-heart"></use>
+                            </svg>
+                        </button>
+                        <button class="product-action-btn add-to-cart-btn" title="Carrito">
+                            <svg width="20" height="20" viewBox="0 0 24 24">
+                                <use href="#icon-cart"></use>
+                            </svg>
+                        </button>
                         <button class="product-action-btn view-btn product-link" 
-                           data-name="${product.name}" 
-                           data-price="${product.price}" 
-                           data-img="${product.image_url}" 
-                           data-type="${product.type}"
-                           data-size-config='${JSON.stringify(product.size_config || {})}'
-                           data-packaging-config='${JSON.stringify(product.packaging_config || {})}'
-                           title="Ver detalles">👁</button>
+                        data-name="${product.name}" 
+                        data-price="${product.price}" 
+                        data-img="${product.image_url}" 
+                        data-type="${product.type}"
+                        data-size-config='${JSON.stringify(product.size_config || {})}'
+                        data-packaging-config='${JSON.stringify(product.packaging_config || {})}'
+                        title="Ver detalles">
+                            <svg width="20" height="20" viewBox="0 0 24 24">
+                                <use href="#icon-eye"></use>
+                            </svg>
+                        </button>
                     </div>
                 </div>
             `).join('');
 
             console.log('🎉 PRODUCTOS RENDERIZADOS CON ESTILOS');
+            
+            // AGREGAR ESTO INMEDIATAMENTE DESPUÉS DE RENDERIZAR:
+            setTimeout(() => {
+                if (window.loadFavoritesFromStorage) {
+                    window.loadFavoritesFromStorage();
+                }
+            }, 100);
         }
 
         // --- CORRECCIÓN 1: Mostrar la cuadrícula después de cargar ---
@@ -159,3 +178,28 @@ async function loadAndRenderProducts() {
 document.addEventListener('DOMContentLoaded', loadAndRenderProducts);
 setTimeout(loadAndRenderProducts, 1000);
 window.loadAndRenderProducts = loadAndRenderProducts;
+
+// ... (todo el código existente)
+
+// AGREGAR ESTO AL FINAL DEL ARCHIVO:
+function triggerFavoritesReload() {
+    if (window.loadFavoritesFromStorage) {
+        window.loadFavoritesFromStorage();
+    } else {
+        // Si la función no está disponible aún, esperar un poco
+        setTimeout(triggerFavoritesReload, 100);
+    }
+}
+
+// Después de renderizar los productos, actualizar favoritos
+window.updateProductFavorites = function() {
+    if (window.loadFavoritesFromStorage) {
+        window.loadFavoritesFromStorage();
+    }
+};
+
+// Llamar a la actualización después de renderizar
+window.loadAndRenderProducts = async function() {
+    await loadAndRenderProducts();
+    setTimeout(triggerFavoritesReload, 200);
+};
