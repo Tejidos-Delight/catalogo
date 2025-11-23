@@ -44,12 +44,8 @@ async function checkUserSession() {
 
 // --- FUNCIÓN 'setupEventListeners' ---
 function setupEventListeners() {
-    // Formulario de producto
     document.getElementById('product-form').addEventListener('submit', saveProduct);
     document.getElementById('product-image').addEventListener('change', previewImage);
-    document.getElementById('cancel-btn').addEventListener('click', resetForm);
-
-    // Filtros y búsqueda
     document.getElementById('category-filter').addEventListener('change', function() {
         currentFilter = this.value;
         displayProducts();
@@ -58,17 +54,12 @@ function setupEventListeners() {
         currentSort = this.value;
         displayProducts();
     });
-    document.getElementById('search-products').addEventListener('keyup', filterProducts);
-
-    // Opciones del formulario (tamaño, empaque)
     document.querySelectorAll('input[name="size-type"]').forEach(radio => {
         radio.addEventListener('change', toggleSizeOptions);
     });
     document.querySelectorAll('input[name="packaging-type"]').forEach(radio => {
         radio.addEventListener('change', togglePackagingOptions);
     });
-
-    // Botón de Cerrar Sesión
     const logoutBtn = document.getElementById('logout-btn');
     if (logoutBtn) {
         logoutBtn.addEventListener('click', async () => {
@@ -81,37 +72,36 @@ function setupEventListeners() {
         });
     }
     
-    // Delegación de eventos para botones de productos (Mover, Editar, Borrar)
+    // Listeners para los botones globales (delegación de eventos)
     const productsContainer = document.getElementById('products-container');
     productsContainer.addEventListener('click', function(event) {
-        const target = event.target.closest('button');
-        if (!target) return;
-
-        const id = target.dataset.id;
+        const target = event.target;
         if (target.classList.contains('btn-move-up')) {
-            moveProductUp(id);
+            moveProductUp(target.dataset.id);
         } else if (target.classList.contains('btn-move-down')) {
-            moveProductDown(id);
+            moveProductDown(target.dataset.id);
         } else if (target.classList.contains('btn-edit')) {
-            editProduct(id);
+            editProduct(target.dataset.id);
         } else if (target.classList.contains('btn-delete')) {
-            deleteProduct(id);
+            deleteProduct(target.dataset.id);
         }
     });
 
-    // Listeners de los botones de navegación del panel
-    document.getElementById('btn-ver-productos').addEventListener('click', () => showSection('products'));
-    document.getElementById('btn-agregar-producto').addEventListener('click', () => {
+    // ✅ CORRECTO: Listeners de los botones de navegación del panel
+    document.querySelector('button[onclick="showSection(\'products\')"]').addEventListener('click', () => showSection('products'));
+    document.querySelector('button[onclick="showSection(\'add-product\')"]').addEventListener('click', () => {
         resetForm();
         showSection('add-product');
     });
-    document.getElementById('btn-exportar-importar').addEventListener('click', () => showSection('export'));
-    document.getElementById('btn-volver-catalogo').addEventListener('click', () => window.location.href='index.html');
+    document.querySelector('button[onclick="showSection(\'export\')"]').addEventListener('click', () => showSection('export'));
+    document.querySelector('button[onclick="window.location.href=\'index.html\'"]').addEventListener('click', () => window.location.href='index.html');
+    document.getElementById('cancel-btn').addEventListener('click', resetForm);
+    document.getElementById('search-products').addEventListener('keyup', filterProducts);
 
-    // Listeners de Importar/Exportar
-    document.getElementById('btn-exportar-json').addEventListener('click', exportProducts);
-    document.getElementById('btn-importar-json').addEventListener('click', importProducts);
-    document.getElementById('btn-restablecer').addEventListener('click', resetToDefault);
+    // ✅ CORRECTO: Listeners de Importar/Exportar
+    document.querySelector('button[onclick="exportProducts()"]').addEventListener('click', exportProducts);
+    document.querySelector('button[onclick="importProducts()"]').addEventListener('click', importProducts);
+    document.querySelector('button[onclick="resetToDefault()"]').addEventListener('click', resetToDefault);
 }
 
 // =================================================================
@@ -306,7 +296,8 @@ async function saveProduct(event) {
         localStorage.setItem('tejidosDelightProducts', JSON.stringify(products));
         resetForm();
         showSection('products');
-        displayProducts();
+        await loadProducts();    // ← NUEVA LÍNEA: Recargar desde DB
+        displayProducts();       // ← Mostrar datos actualizados
 
     } catch (error) {
         console.error('❌ Error guardando en Supabase:', error);
@@ -453,8 +444,9 @@ async function moveProductUp(productId) {
         const tempOrder = product.order;
         product.order = previousProduct.order;
         previousProduct.order = tempOrder;
-        await saveProducts(); // Sincroniza todos los cambios de orden
-        displayProducts();
+        await saveProducts();
+        await loadProducts();    // ← NUEVA LÍNEA
+        displayProducts();       // ← Refrescar vista
     }
 }
 
@@ -467,8 +459,9 @@ async function moveProductDown(productId) {
         const tempOrder = product.order;
         product.order = nextProduct.order;
         nextProduct.order = tempOrder;
-        await saveProducts(); // Sincroniza todos los cambios de orden
-        displayProducts();
+        await saveProducts();
+        await loadProducts();    // ← NUEVA LÍNEA  
+        displayProducts();       // ← Refrescar vista
     }
 }
 
@@ -491,6 +484,8 @@ async function saveProducts() {
 
         showAlert('✅ Productos sincronizados con la base de datos', 'success');
         localStorage.setItem('tejidosDelightProducts', JSON.stringify(products));
+        await loadProducts();    // ← NUEVA LÍNEA: Recargar datos frescos
+        displayProducts();       // ← NUEVA LÍNEA: Actualizar vista
     } catch (error) {
         console.error('❌ Error guardando productos en lote:', error);
         localStorage.setItem('tejidosDelightProducts', JSON.stringify(products));
