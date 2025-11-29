@@ -141,6 +141,7 @@ async function loadAndRenderProducts() {
                         data-price="${product.price}" 
                         data-img="${product.image_url}" 
                         data-type="${product.type}"
+                        data-category="${product.category}"  // ← AGREGAR ESTA LÍNEA
                         data-size-config='${JSON.stringify(product.size_config || {})}'
                         data-packaging-config='${JSON.stringify(product.packaging_config || {})}'
                         title="Ver detalles">

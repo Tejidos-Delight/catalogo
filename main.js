@@ -35,6 +35,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // --- Variables de Estado ---
     let currentProductName = "";
     let currentProductType = "standard";
+    let currentProductCategory = ""; // ← NUEVA VARIABLE
     let currentQuantity = 1;
     let isEditingCartItem = false;
     let editingCartItemName = "";
@@ -363,7 +364,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function openModal(event) {
         event.preventDefault(); const link = this; 
-        currentProductName = link.dataset.name; currentProductType = link.dataset.type || 'standard'; currentQuantity = 1; 
+        currentProductName = link.dataset.name; currentProductType = link.dataset.type || 'standard'; currentProductCategory = link.dataset.category || 'productos'; currentQuantity = 1; 
         modalImg.src = link.dataset.img; modalName.textContent = currentProductName; modalPrice.textContent = link.dataset.price;
         try { currentSizeConfig = JSON.parse(link.dataset.sizeConfig || '{}'); } catch (e) { currentSizeConfig = {}; }
         try { currentPackagingConfig = JSON.parse(link.dataset.packagingConfig || '{}'); } catch (e) { currentPackagingConfig = {}; }
@@ -464,29 +465,141 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function addToCart(name, price, img, details = '', quantity = 1, size = '', packaging = '') {
-        let optimizedImg = img; if (img && img.startsWith('data:image')) optimizedImg = 'imagenes/personalizado.jpg';
+        let optimizedImg = img; 
+        if (img && img.startsWith('data:image')) optimizedImg = 'imagenes/personalizado.jpg';
         const itemIdentifier = name + size + packaging;
+        
+        // Obtener la categoría del producto (necesitamos pasar este dato)
+        let category = "productos"; // Valor por defecto
+        
         if (isEditingCartItem) {
             const idx = cart.findIndex(item => item.identifier === editingCartItemName);
-            if (idx !== -1) { cart[idx] = { ...cart[idx], name, price, img: optimizedImg, details, quantity, size, packaging, identifier: itemIdentifier }; isEditingCartItem = false; editingCartItemName = ""; }
+            if (idx !== -1) { 
+                cart[idx] = { ...cart[idx], name, price, img: optimizedImg, details, quantity, size, packaging, identifier: itemIdentifier }; 
+                isEditingCartItem = false; 
+                editingCartItemName = ""; 
+            }
         } else {
             const idx = cart.findIndex(item => item.identifier === itemIdentifier);
             if (idx !== -1) cart[idx].quantity += quantity;
-            else cart.push({ name, price, img: optimizedImg, details, quantity, size, packaging, identifier: itemIdentifier });
+            else cart.push({ 
+                name, 
+                price, 
+                img: optimizedImg, 
+                details, 
+                quantity, 
+                size, 
+                packaging, 
+                identifier: itemIdentifier,
+                category: currentProductCategory // ← AGREGAR ESTO
+            });
         }
-        saveCartToStorage(); updateCartCounter(); updateCartDisplay(); updateCheckoutButton();
-        if (cartCounter) { cartCounter.classList.add('pulse'); setTimeout(() => cartCounter.classList.remove('pulse'), 1000); }
+        saveCartToStorage(); 
+        updateCartCounter(); 
+        updateCartDisplay(); 
+        updateCheckoutButton();
+        if (cartCounter) { 
+            cartCounter.classList.add('pulse'); 
+            setTimeout(() => cartCounter.classList.remove('pulse'), 1000); 
+        }
     }
-
     function proceedToCheckout() {
-        if (cart.length === 0) return alert('Carrito vacío');
-        if (!selectedPaymentMethod) return alert('Selecciona contacto');
-        let msg = "¡Hola! Me interesan:\n\n";
-        cart.forEach(i => { msg += `• ${i.name} (${i.price}) x${i.quantity}\n`; if(i.size && i.size !== 'N/A') msg += `  Tam: ${i.size}\n`; msg += `  Emp: ${i.packaging}\n`; });
-        msg += `\nTotal: ${cartTotalElement.textContent}\n\nGracias!`;
-        if (selectedPaymentMethod === 'whatsapp') window.open(`https://wa.me/593999406153?text=${encodeURIComponent(msg)}`, '_blank');
-        else { navigator.clipboard.writeText(msg); alert("Copiado. Pégalo en Instagram."); window.open('https://ig.me/m/tejidosdelight', '_blank'); }
-        cart = []; saveCartToStorage(); updateCartCounter(); updateCartDisplay(); toggleCart(true);
+        // 1. Validaciones básicas
+        if (cart.length === 0) return alert('El carrito está vacío');
+        if (!selectedPaymentMethod) return alert('Por favor, selecciona un método de contacto (WhatsApp o Instagram)');
+        
+        // 2. Organizar productos por categoría para que el mensaje se vea ordenado
+        const productsByCategory = {};
+        
+        cart.forEach(item => {
+            let category = item.category || "productos";
+            
+            // Normalizar nombres de categorías
+            const categoryNames = {
+                "amigurumis": "AMIGURUMIS",
+                "flores": "FLORES", 
+                "llaveros": "LLAVEROS",
+                "pulseras": "PULSERAS",
+                "colgantes": "COLGANTES",
+                "bolsas": "BOLSAS",
+                "macetas": "MACETAS",
+                "combos": "COMBOS",
+                "productos": "PRODUCTOS"
+            };
+            
+            const formattedCategory = categoryNames[category] || category.toUpperCase();
+            
+            if (!productsByCategory[formattedCategory]) {
+                productsByCategory[formattedCategory] = [];
+            }
+            productsByCategory[formattedCategory].push(item);
+        });
+        
+        // 3. Construir el mensaje
+        let msg = "¡Hola! Me interesan los siguientes productos:\n\n";
+        
+        // Orden específico para que aparezcan en el mensaje
+        const categoryOrder = ["AMIGURUMIS", "FLORES", "PULSERAS", "LLAVEROS", "COLGANTES", "BOLSAS", "MACETAS", "COMBOS", "PRODUCTOS"];
+        
+        categoryOrder.forEach(category => {
+            if (productsByCategory[category] && productsByCategory[category].length > 0) {
+                // EMOJIS por categoría
+                const categoryEmojis = {
+                    "AMIGURUMIS": "🐻",
+                    "FLORES": "🌷", 
+                    "PULSERAS": "📿",
+                    "LLAVEROS": "🔑",
+                    "COLGANTES": "✨",
+                    "BOLSAS": "🛍️",
+                    "MACETAS": "🏺",
+                    "COMBOS": "🎁",
+                    "PRODUCTOS": "📦"
+                };
+                
+                msg += `${categoryEmojis[category] || "📦"} *${category}:*\n`;
+                
+                productsByCategory[category].forEach(item => {
+                    msg += `• ${item.name} (${item.price}) x${item.quantity}\n`;
+                    if(item.size && item.size !== 'N/A') msg += `  Tamaño: ${item.size}\n`;
+                    msg += `  Empaque: ${item.packaging}\n`;
+                });
+                
+                msg += `\n`;
+            }
+        });
+        
+        // Calcular total final
+        let total = 0;
+        cart.forEach(item => {
+            const priceVal = parseFloat(item.price.replace('$', '')) || 0;
+            total += priceVal * item.quantity;
+        });
+        
+        msg += `💰 *Total: $${total.toFixed(2)}*\n\n`;
+        msg += `¡Gracias! Espero tu respuesta para coordinar la entrega.`;
+        
+        // 4. Enviar mensaje según el método seleccionado
+        if (selectedPaymentMethod === 'whatsapp') {
+            // --- CORRECCIÓN CRÍTICA ---
+            // Usamos encodeURIComponent sobre todo el texto.
+            const encodedMsg = encodeURIComponent(msg);
+            
+            // Usamos api.whatsapp.com en lugar de wa.me para evitar errores de redirección con emojis
+            window.open(`https://api.whatsapp.com/send?phone=593999406153&text=${encodedMsg}`, '_blank');
+            
+        } else { 
+            // Lógica para Instagram
+            navigator.clipboard.writeText(msg); 
+            alert("Mensaje copiado al portapapeles. Pégalo en el chat de Instagram."); 
+            window.open('https://ig.me/m/tejidosdelight', '_blank'); 
+        }
+        
+        // 5. Limpieza final (vaciar carrito y actualizar UI)
+        cart = []; 
+        saveCartToStorage(); 
+        updateCartCounter(); 
+        updateCartDisplay(); 
+        toggleCart(true); // Cerrar el sidebar del carrito
     }
 
     function decreaseQuantity() { if (currentQuantity > 1) { currentQuantity--; updateQuantityDisplay(); } }
@@ -575,8 +688,98 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     function showFavoritesMessage(msg) { favoritesMessage.textContent = msg; favoritesMessage.classList.add('show'); setTimeout(() => favoritesMessage.classList.remove('show'), 2000); }
-    function sendWhatsApp() { if(!validateForm()) { showFavoritesMessage('Completa campos'); return; } const {size, packaging} = getFormData(); let msg = `¡Hola! Me interesa: *${currentProductName}*\n\n`; if(size !== 'N/A') msg += `*Tam:* ${size}\n`; msg += `*Emp:* ${packaging}\n*Cant:* ${currentQuantity}`; window.open(`https://wa.me/593999406153?text=${encodeURIComponent(msg)}`, '_blank'); }
-    function sendInstagram() { if(!validateForm()) { showFavoritesMessage('Completa campos'); return; } const {size, packaging} = getFormData(); let msg = `Me interesa: ${currentProductName}\n`; if(size !== 'N/A') msg += `Tam: ${size}\n`; msg += `Emp: ${packaging}\nCant: ${currentQuantity}`; navigator.clipboard.writeText(msg); alert("Copiado. Pégalo en Instagram."); window.open('https://ig.me/m/tejidosdelight', '_blank'); }
+    function sendWhatsApp() {
+        // 1. Validar formulario
+        if(!validateForm()) { showFavoritesMessage('Completa los campos'); return; } 
+        
+        const {size, packaging} = getFormData(); 
+        
+        // 2. Definir nombres de categorías
+        const categoryNames = {
+            "amigurumis": "Amigurumi",
+            "flores": "Flor", 
+            "llaveros": "Llavero",
+            "pulseras": "Pulsera",
+            "colgantes": "Colgante",
+            "bolsas": "Bolsa",
+            "macetas": "Maceta",
+            "combos": "Combo",
+            "productos": "Producto"
+        };
+        
+        // 3. Definir EMOJIS
+        const categoryEmojis = {
+            "amigurumis": "🐻",
+            "flores": "🌷", 
+            "llaveros": "🔑",
+            "pulseras": "📿",
+            "colgantes": "✨",
+            "bolsas": "🛍️",
+            "macetas": "🏺",
+            "combos": "🎁",
+            "productos": "📦"
+        };
+        
+        const category = categoryNames[currentProductCategory] || "Producto";
+        const emoji = categoryEmojis[currentProductCategory] || "📦";
+        
+        // 4. Construir el mensaje
+        let msg = `¡Hola! ${emoji} Me interesa este *${category}*:\n\n`;
+        
+        // CORRECCIÓN AQUÍ: Usamos .trim() para quitar espacios y asegurar la negrita
+        msg += `*${currentProductName.trim()}* (${modalPrice.textContent})\n\n`;
+        
+        if(size !== 'N/A') msg += `*Tamaño:* ${size}\n`; 
+        msg += `*Empaque:* ${packaging}\n`;
+        msg += `*Cantidad:* ${currentQuantity}`; 
+        
+        // 5. Enviar
+        const encodedMsg = encodeURIComponent(msg);
+        window.open(`https://api.whatsapp.com/send?phone=593999406153&text=${encodedMsg}`, '_blank'); 
+    }
+    function sendInstagram() {
+        if(!validateForm()) { showFavoritesMessage('Completa campos'); return; } 
+        const {size, packaging} = getFormData(); 
+        
+        // Determinar categoría para producto individual
+        const categoryNames = {
+            "amigurumis": "Amigurumi",
+            "flores": "Flor", 
+            "llaveros": "Llavero",
+            "pulseras": "Pulsera",
+            "colgantes": "Colgante",
+            "bolsas": "Bolsa",
+            "macetas": "Maceta",
+            "combos": "Combo",
+            "productos": "Producto"
+        };
+        
+        const category = categoryNames[currentProductCategory] || "Producto";
+        
+        // EMOJIS para cada categoría en Instagram
+        const categoryEmojis = {
+            "amigurumis": "🧸",
+            "flores": "🌷", 
+            "llaveros": "🔑",
+            "pulseras": "📿",
+            "colgantes": "✨",
+            "bolsas": "👜",
+            "macetas": "🌱",
+            "combos": "🎁",
+            "productos": "📦"
+        };
+        
+        const emoji = categoryEmojis[currentProductCategory] || "📦";
+        
+        let msg = `${emoji} Me interesa este ${category}:\n\n`;
+        msg += `${currentProductName} (${modalPrice.textContent})\n\n`;
+        if(size !== 'N/A') msg += `Tamaño: ${size}\n`; 
+        msg += `Empaque: ${packaging}\nCantidad: ${currentQuantity}`; 
+        
+        navigator.clipboard.writeText(msg); 
+        alert("Mensaje copiado. Pégalo en Instagram."); 
+        window.open('https://ig.me/m/tejidosdelight', '_blank'); 
+    }
     function saveCartToStorage() { localStorage.setItem('tejidosDelightCart', JSON.stringify(cart)); }
     function loadCartFromStorage() { try { cart = JSON.parse(localStorage.getItem('tejidosDelightCart')||'[]'); cart.forEach(i => { if(!i.identifier) i.identifier = i.name + (i.size||'') + (i.packaging||''); }); } catch(e) { cart = []; } }
     function saveFavoritesToStorage() { localStorage.setItem('tejidosDelightFavorites', JSON.stringify(favorites)); }
