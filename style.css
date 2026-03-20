@@ -441,7 +441,7 @@ footer { background-color: var(--secondary-color); color: #fcebe3; padding: 40px
     #hero-logo { width: 110px; }
     .main-product-img { width: 100%; max-width: 450px; }
     
-    .product-grid, .categories-grid { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 30px; }
+    .product-grid, .categories-grid { grid-template-columns: repeat(3, 1fr); max-width: auto; margin: 0 70px;}
     
     .modal-content { display: grid; grid-template-columns: 1.1fr 1.3fr; gap: 30px; }
     .modal-actions { flex-direction: row; }
@@ -551,4 +551,27 @@ footer { background-color: var(--secondary-color); color: #fcebe3; padding: 40px
     height: 48px;
     fill: #ddd;
     margin-bottom: 15px;
+}
+
+/* Estilos para el arrastre en el admin */
+.admin-product-card {
+    cursor: grab; /* Indica que se puede agarrar */
+    transition: transform 0.2s ease;
+}
+
+.admin-product-card:active {
+    cursor: grabbing;
+}
+
+/* Estilo del "fantasma" (el espacio vacío mientras arrastras) */
+.sortable-ghost {
+    opacity: 0.4;
+    border: 2px dashed var(--primary-color);
+    background-color: var(--accent-color);
+}
+
+/* Estilo de la tarjeta que se está moviendo */
+.sortable-chosen {
+    background-color: #f0f0f0;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.15);
 }

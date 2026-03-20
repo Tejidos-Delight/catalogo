@@ -390,7 +390,7 @@ function getCategoryName(category) {
     const categories = {
         'amigurumis': 'Amigurumis', 'flores': 'Flores y Ramos', 'llaveros': 'Llaveros',
         'pulseras': 'Pulseras', 'colgantes': 'Colgantes', 'combos': 'Combos',
-        'bolsas': 'Bolsas', 'macetas': 'Macetas'
+        'bolsas': 'Bolsas', 'macetas': 'Macetas', 'adicionales': 'Artículos Adicionales'
     };
     return categories[category] || category;
 }
