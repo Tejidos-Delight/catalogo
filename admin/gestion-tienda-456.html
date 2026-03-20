@@ -284,6 +284,7 @@
         <div class="admin-nav">
             <button class="admin-btn" onclick="showSection('products')">Ver Productos</button>
             <button class="admin-btn" onclick="showSection('add-product')">Agregar Producto</button>
+            <button class="admin-btn" onclick="showSection('promotions')">Promociones</button>
             <button class="admin-btn" onclick="showSection('export')">Exportar/Importar</button>
             <button class="admin-btn" onclick="window.location.href='../index.html'">Volver al Catálogo</button>
             <button id="logout-btn" class="btn-delete" style="background-color: #c9302c; border: none; padding: 10px 15px; color: white; cursor: pointer;">
@@ -476,6 +477,47 @@
                 <p>¡Cuidado! Esto eliminará todos los productos y los restablecerá a los valores predeterminados.</p>
                 <button class="admin-btn" onclick="resetToDefault()" style="background: #e74c3c;">Restablecer a Valores Predeterminados</button>
             </div>
+        </div>
+        <div id="promotions-section" class="admin-section">
+            <h2>Gestión de Promociones</h2>
+            
+            <form id="promotion-form">
+                <input type="hidden" id="promotion-id">
+                <div class="form-group">
+                    <label>Nombre de la promoción</label>
+                    <input type="text" id="promotion-name" required>
+                </div>
+                <div class="form-group">
+                    <label>Texto del banner</label>
+                    <input type="text" id="promotion-banner" required placeholder="Ej: ¡10% OFF en 3 productos o más!">
+                </div>
+                <div class="form-group">
+                    <label>Tipo de descuento</label>
+                    <select id="promotion-type">
+                        <option value="percentage">Porcentaje (%)</option>
+                        <option value="fixed">Cantidad fija ($)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Valor</label>
+                    <input type="number" id="promotion-value" step="0.01" required>
+                </div>
+                <div class="form-group">
+                    <label>Cantidad mínima de productos</label>
+                    <input type="number" id="promotion-min-qty" min="1" value="3" required>
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="promotion-active" checked> Activa
+                    </label>
+                </div>
+                <button type="submit" class="admin-btn">Guardar Promoción</button>
+                <button type="button" id="cancel-promo-btn" class="admin-btn" style="background:#6c757d; display:none;">Cancelar</button>
+            </form>
+
+            <hr>
+            <h3>Promociones Activas</h3>
+            <div id="promotions-list"></div>
         </div>
     </div>
 

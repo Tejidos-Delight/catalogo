@@ -1,4 +1,4 @@
-// products-loader.js - VERSIÓN CORREGIDA (incluye categoría "adicionales")
+// products-loader.js - VERSIÓN CON EVENTO PERSONALIZADO
 console.log('🔧 products-loader.js cargado');
 
 async function loadAndRenderProducts() {
@@ -96,7 +96,7 @@ async function loadAndRenderProducts() {
         const path = window.location.pathname;
         const fileName = path.split('/').pop().replace('.html', '');
         
-        // MAPA DE CATEGORÍAS ACTUALIZADO (incluye "adicionales")
+        // MAPA DE CATEGORÍAS (incluye "adicionales")
         const categoryMap = {
             'amigurumis': 'amigurumis',
             'flores': 'flores',
@@ -106,13 +106,12 @@ async function loadAndRenderProducts() {
             'combos': 'combos',
             'bolsas': 'bolsas',
             'macetas': 'macetas',
-            'adicionales': 'adicionales'   // ← CORRECCIÓN AQUÍ
+            'adicionales': 'adicionales'
         };
         
         const currentCategory = categoryMap[fileName];
         
         if (!currentCategory) {
-            // Categoría no reconocida: mostrar mensaje de error
             productGrid.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:40px; color:#d9534f;">⚠️ Categoría no válida. Verifica el nombre del archivo.</div>';
             productGrid.classList.add('loaded');
             return;
@@ -126,7 +125,13 @@ async function loadAndRenderProducts() {
         if (categoryProducts.length === 0) {
             productGrid.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:40px;">✨ No hay productos en esta categoría todavía. ¡Vuelve pronto!</div>';
         } else {
-            // Renderizar productos
+            // Guardar productos en variable global para acceso rápido
+            window.currentProducts = {};
+            categoryProducts.forEach(product => {
+                window.currentProducts[product.id] = product;
+            });
+
+            // Renderizar productos con data-id
             productGrid.innerHTML = categoryProducts.map(product => `
                 <div class="product-card" data-category="${product.type === 'standard' ? 'estandar' : 'personalizados'}">
                     <img src="${product.image_url}" alt="${product.name}" 
@@ -145,6 +150,7 @@ async function loadAndRenderProducts() {
                             </svg>
                         </button>
                         <button class="product-action-btn view-btn product-link" 
+                            data-id="${product.id}"
                             data-name="${product.name}" 
                             data-price="${product.price}" 
                             data-img="${product.image_url}" 
@@ -173,10 +179,17 @@ async function loadAndRenderProducts() {
 
         productGrid.classList.add('loaded');
 
+        // DISPARAR EVENTO PERSONALIZADO PARA INDICAR QUE LOS PRODUCTOS ESTÁN LISTOS
+        const productsLoadedEvent = new CustomEvent('productsLoaded', { detail: { products: categoryProducts } });
+        window.dispatchEvent(productsLoadedEvent);
+        console.log('📢 Evento "productsLoaded" disparado');
+
     } catch (error) {
         console.error('Error cargando productos:', error);
         productGrid.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:40px; color:red;">❌ Error al cargar los productos. Intenta de nuevo.</div>';
         productGrid.classList.add('loaded');
+        // También emitimos evento aunque haya error (para no bloquear)
+        window.dispatchEvent(new CustomEvent('productsLoaded', { detail: { error: true } }));
     }
 }
 

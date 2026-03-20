@@ -36,6 +36,7 @@ async function checkUserSession() {
         loadProducts();
         setupEventListeners();
         updateCategoryFilter();
+        loadPromotions();
     } else {
         console.log('No hay sesión, redirigiendo a login...');
         window.location.href = 'acceso-seguro-789.html';
@@ -747,6 +748,157 @@ async function reorderProductsFromDOM() {
         showAlert('Error al guardar: ' + error.message, 'error');
     }
 }
+
+// Variables para promociones
+let promotions = [];
+
+// Cargar promociones desde Supabase
+async function loadPromotions() {
+    try {
+        const { data, error } = await sbClient
+            .from('promotions')
+            .select('*')
+            .order('created_at', { ascending: false });
+        if (error) throw error;
+        promotions = data || [];
+        renderPromotionsList();
+    } catch (error) {
+        console.error('Error cargando promociones:', error);
+        showAlert('Error al cargar promociones', 'error');
+    }
+}
+
+// Renderizar lista de promociones
+function renderPromotionsList() {
+    const container = document.getElementById('promotions-list');
+    if (!container) return;
+    
+    if (promotions.length === 0) {
+        container.innerHTML = '<p>No hay promociones creadas.</p>';
+        return;
+    }
+    
+    container.innerHTML = promotions.map(promo => `
+        <div class="promotion-card" style="border:1px solid #eee; padding:12px; margin-bottom:10px; border-radius:8px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <strong>${promo.name}</strong>
+                <div>
+                    <button class="btn-edit-promo" data-id="${promo.id}">Editar</button>
+                    <button class="btn-delete-promo" data-id="${promo.id}">Eliminar</button>
+                    <button class="btn-toggle-promo" data-id="${promo.id}" data-active="${promo.active}">
+                        ${promo.active ? 'Desactivar' : 'Activar'}
+                    </button>
+                </div>
+            </div>
+            <p>${promo.banner_text}</p>
+            <small>Tipo: ${promo.type === 'percentage' ? 'Porcentaje' : 'Cantidad fija'} | Valor: ${promo.value}${promo.type === 'percentage' ? '%' : '$'} | Mínimo: ${promo.min_quantity} productos</small>
+        </div>
+    `).join('');
+    
+    // Event listeners para botones
+    document.querySelectorAll('.btn-edit-promo').forEach(btn => {
+        btn.addEventListener('click', () => editPromotion(btn.dataset.id));
+    });
+    document.querySelectorAll('.btn-delete-promo').forEach(btn => {
+        btn.addEventListener('click', () => deletePromotion(btn.dataset.id));
+    });
+    document.querySelectorAll('.btn-toggle-promo').forEach(btn => {
+        btn.addEventListener('click', () => togglePromotionActive(btn.dataset.id, btn.dataset.active === 'true'));
+    });
+}
+
+// Guardar promoción (nueva o edición)
+async function savePromotion(event) {
+    event.preventDefault();
+    const id = document.getElementById('promotion-id').value;
+    const name = document.getElementById('promotion-name').value;
+    const banner_text = document.getElementById('promotion-banner').value;
+    const type = document.getElementById('promotion-type').value;
+    const value = parseFloat(document.getElementById('promotion-value').value);
+    const min_quantity = parseInt(document.getElementById('promotion-min-qty').value);
+    const active = document.getElementById('promotion-active').checked;
+    
+    const promoData = { name, banner_text, type, value, min_quantity, active };
+    
+    try {
+        if (id) {
+            const { error } = await sbClient
+                .from('promotions')
+                .update(promoData)
+                .eq('id', id);
+            if (error) throw error;
+            showAlert('Promoción actualizada', 'success');
+        } else {
+            const { error } = await sbClient
+                .from('promotions')
+                .insert(promoData);
+            if (error) throw error;
+            showAlert('Promoción creada', 'success');
+        }
+        resetPromotionForm();
+        loadPromotions();
+    } catch (error) {
+        console.error('Error guardando promoción:', error);
+        showAlert('Error al guardar', 'error');
+    }
+}
+
+function resetPromotionForm() {
+    document.getElementById('promotion-form').reset();
+    document.getElementById('promotion-id').value = '';
+    document.getElementById('promotion-active').checked = true;
+    document.getElementById('cancel-promo-btn').style.display = 'none';
+    document.getElementById('promotion-name').focus();
+}
+
+async function editPromotion(id) {
+    const promo = promotions.find(p => p.id === id);
+    if (!promo) return;
+    document.getElementById('promotion-id').value = promo.id;
+    document.getElementById('promotion-name').value = promo.name;
+    document.getElementById('promotion-banner').value = promo.banner_text;
+    document.getElementById('promotion-type').value = promo.type;
+    document.getElementById('promotion-value').value = promo.value;
+    document.getElementById('promotion-min-qty').value = promo.min_quantity;
+    document.getElementById('promotion-active').checked = promo.active;
+    document.getElementById('cancel-promo-btn').style.display = 'inline-block';
+    showSection('promotions');
+}
+
+async function deletePromotion(id) {
+    if (!confirm('¿Eliminar esta promoción?')) return;
+    try {
+        const { error } = await sbClient
+            .from('promotions')
+            .delete()
+            .eq('id', id);
+        if (error) throw error;
+        showAlert('Promoción eliminada', 'success');
+        loadPromotions();
+    } catch (error) {
+        console.error('Error eliminando:', error);
+        showAlert('Error al eliminar', 'error');
+    }
+}
+
+async function togglePromotionActive(id, currentActive) {
+    try {
+        const { error } = await sbClient
+            .from('promotions')
+            .update({ active: !currentActive })
+            .eq('id', id);
+        if (error) throw error;
+        showAlert(`Promoción ${!currentActive ? 'activada' : 'desactivada'}`, 'success');
+        loadPromotions();
+    } catch (error) {
+        console.error('Error toggling:', error);
+        showAlert('Error al cambiar estado', 'error');
+    }
+}
+
+// Agregar evento al formulario
+document.getElementById('promotion-form')?.addEventListener('submit', savePromotion);
+document.getElementById('cancel-promo-btn')?.addEventListener('click', resetPromotionForm);
 
 // =================================================================
 // HACER FUNCIONES GLOBALES PARA LOS BOTONES DEL HTML
