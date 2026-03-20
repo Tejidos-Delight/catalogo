@@ -1,5 +1,5 @@
 // =================================================================
-// ARCHIVO admin.js (VERSIÓN 9 - CON OPCIÓN 'NO APLICA TAMAÑO')
+// ARCHIVO admin.js (VERSIÓN 10 - CON BOTONES NO ARRASTRABLES Y MEJORAS)
 // =================================================================
 
 // 1. Importar la función de Supabase
@@ -87,7 +87,7 @@ function setupEventListeners() {
         }
     });
 
-    // ✅ CORRECTO: Listeners de los botones de navegación del panel
+    // Listeners de los botones de navegación del panel
     document.querySelector('button[onclick="showSection(\'products\')"]').addEventListener('click', () => showSection('products'));
     document.querySelector('button[onclick="showSection(\'add-product\')"]').addEventListener('click', () => {
         resetForm();
@@ -97,12 +97,6 @@ function setupEventListeners() {
     document.querySelector('button[onclick="window.location.href=\'index.html\'"]').addEventListener('click', () => window.location.href='index.html');
     document.getElementById('cancel-btn').addEventListener('click', resetForm);
     document.getElementById('search-products').addEventListener('keyup', filterProducts);
-
-    /*// ✅ CORRECTO: Listeners de Importar/Exportar
-    document.querySelector('button[onclick="exportProducts()"]').addEventListener('click', exportProducts);
-    document.querySelector('button[onclick="importProducts()"]').addEventListener('click', importProducts);
-    document.querySelector('button[onclick="resetToDefault()"]').addEventListener('click', resetToDefault);
-    */
 }
 
 // =================================================================
@@ -224,10 +218,8 @@ async function saveProduct(event) {
                 options: sizeOptions.length > 0 ? sizeOptions : ['10cm', '15cm', '20cm'] 
             };
         } else if (sizeType === 'none') {
-            // Nueva configuración para cuando no hay tamaño
             sizeConfig = { type: 'none' };
         }
-        // -----------------------------------------------------
         
         const packagingType = document.querySelector('input[name="packaging-type"]:checked').value;
         let packagingConfig = {};
@@ -297,8 +289,8 @@ async function saveProduct(event) {
         localStorage.setItem('tejidosDelightProducts', JSON.stringify(products));
         resetForm();
         showSection('products');
-        await loadProducts();    // ← NUEVA LÍNEA: Recargar desde DB
-        displayProducts();       // ← Mostrar datos actualizados
+        await loadProducts();    // Recargar desde DB
+        displayProducts();       // Mostrar datos actualizados
 
     } catch (error) {
         console.error('❌ Error guardando en Supabase:', error);
@@ -376,9 +368,9 @@ function displayProducts(filteredProducts = null) {
             </div>
 
             <div class="admin-product-actions-group">
-                <button class="btn-info-action" onclick="toggleDetails('${product.id}')">Info</button>
-                <button class="btn-edit-action btn-edit" data-id="${product.id}">Editar</button>
-                <button class="btn-delete-action btn-delete" data-id="${product.id}">Borrar</button>
+                <button class="btn-info-action" onclick="toggleDetails('${product.id}')" draggable="false">Info</button>
+                <button class="btn-edit-action btn-edit" data-id="${product.id}" draggable="false">Editar</button>
+                <button class="btn-delete-action btn-delete" data-id="${product.id}" draggable="false">Borrar</button>
             </div>
         </div>
     `}).join('');
@@ -389,9 +381,9 @@ function displayProducts(filteredProducts = null) {
 // Nueva función global para expandir detalles
 window.toggleDetails = function(id) {
     const details = document.getElementById(`details-${id}`);
-    const btn = details.nextElementSibling;
-    const isShowing = details.classList.toggle('show');
-    btn.textContent = isShowing ? 'Ver menos' : 'Ver más';
+    if (details) {
+        details.classList.toggle('show');
+    }
 };
 
 function getCategoryName(category) {
@@ -417,7 +409,6 @@ function updateCategoryFilter() {
 
 function getSizeDisplay(sizeConfig) {
     if (!sizeConfig) return 'No configurado';
-    // Mostrar 'No aplica' en la tarjeta del admin
     if (sizeConfig.type === 'none') { return 'No aplica'; }
     if (sizeConfig.type === 'fixed') { return `Fijo: ${sizeConfig.value || 'No especificado'}`; } 
     else { const options = sizeConfig.options ? sizeConfig.options.join(', ') : 'No especificadas'; const defaultValue = sizeConfig.defaultValue || 'No especificado'; return `Personalizable: ${defaultValue} (${options})`; }
@@ -454,8 +445,8 @@ async function moveProductUp(productId) {
         product.order = previousProduct.order;
         previousProduct.order = tempOrder;
         await saveProducts();
-        await loadProducts();    // ← NUEVA LÍNEA
-        displayProducts();       // ← Refrescar vista
+        await loadProducts();
+        displayProducts();
     }
 }
 
@@ -469,8 +460,8 @@ async function moveProductDown(productId) {
         product.order = nextProduct.order;
         nextProduct.order = tempOrder;
         await saveProducts();
-        await loadProducts();    // ← NUEVA LÍNEA  
-        displayProducts();       // ← Refrescar vista
+        await loadProducts();
+        displayProducts();
     }
 }
 
@@ -493,8 +484,8 @@ async function saveProducts() {
 
         showAlert('✅ Productos sincronizados con la base de datos', 'success');
         localStorage.setItem('tejidosDelightProducts', JSON.stringify(products));
-        await loadProducts();    // ← NUEVA LÍNEA: Recargar datos frescos
-        displayProducts();       // ← NUEVA LÍNEA: Actualizar vista
+        await loadProducts();
+        displayProducts();
     } catch (error) {
         console.error('❌ Error guardando productos en lote:', error);
         localStorage.setItem('tejidosDelightProducts', JSON.stringify(products));
@@ -534,14 +525,13 @@ function editProduct(id) {
             document.querySelector('input[name="size-type"][value="fixed"]').checked = true;
             document.getElementById('fixed-size').value = product.sizeConfig.value || '10cm';
         } else if (product.sizeConfig && product.sizeConfig.type === 'none') {
-            // --- MODIFICADO: Cargar opción 'none' ---
             document.querySelector('input[name="size-type"][value="none"]').checked = true;
         } else {
             document.querySelector('input[name="size-type"][value="customizable"]').checked = true;
             document.getElementById('default-size').value = product.sizeConfig?.defaultValue || '10cm';
             document.getElementById('size-options').value = product.sizeConfig?.options ? product.sizeConfig.options.join(', ') : '10cm,15cm,20cm';
         }
-        toggleSizeOptions(); // Actualizar UI
+        toggleSizeOptions();
         
         if (product.packagingConfig && product.packagingConfig.type === 'fixed') {
             document.querySelector('input[name="packaging-type"][value="fixed"]').checked = true;
@@ -551,7 +541,7 @@ function editProduct(id) {
             document.getElementById('default-packaging').value = product.packagingConfig?.defaultValue || 'Caja con visor';
             document.getElementById('packaging-options').value = product.packagingConfig?.options ? product.packagingConfig.options.join(', ') : 'Caja con visor,Bolsa de papel';
         }
-        togglePackagingOptions(); // Usar la función correcta
+        togglePackagingOptions();
         
         const preview = document.getElementById('image-preview');
         if (product.image) {
@@ -582,11 +572,11 @@ function resetForm() {
 
     document.querySelector('input[name="size-type"][value="fixed"]').checked = true;
     document.getElementById('fixed-size').value = '10cm';
-    toggleSizeOptions(); // Actualizar UI
+    toggleSizeOptions();
     
     document.querySelector('input[name="packaging-type"][value="fixed"]').checked = true;
     document.getElementById('fixed-packaging').value = 'Caja con visor';
-    togglePackagingOptions(); // Usar la función correcta
+    togglePackagingOptions();
 }
 
 function showAlert(message, type) {
@@ -603,7 +593,6 @@ function exportProducts() {
     console.log('📦 Productos a exportar:', products);
     
     try {
-        // Verificar que hay productos
         if (!products || products.length === 0) {
             showAlert('No hay productos para exportar.', 'error');
             return;
@@ -620,7 +609,6 @@ function exportProducts() {
         linkElement.setAttribute('href', dataUri);
         linkElement.setAttribute('download', exportFileDefaultName);
         
-        // Agregar al DOM temporalmente y hacer click
         document.body.appendChild(linkElement);
         linkElement.click();
         document.body.removeChild(linkElement);
@@ -677,7 +665,6 @@ function toggleSizeOptions() {
         customizableOptions.classList.add('hidden');
     }
     
-    // Deshabilitar input de tamaño fijo si es "none"
     const fixedInput = document.getElementById('fixed-size');
     if (fixedInput) {
         fixedInput.disabled = (selectedType === 'none');
@@ -704,12 +691,15 @@ function initDragAndDrop() {
     sortableInstance = Sortable.create(container, {
         animation: 150,
         scroll: true,
-        scrollSensitivity: 150, // Se activa el scroll a 150px del borde
+        scrollSensitivity: 150,
         scrollSpeed: 20,
         bubbleScroll: true,
         ghostClass: 'sortable-ghost',
         chosenClass: 'sortable-chosen',
         handle: '.admin-product-card',
+        // Excluir botones del arrastre
+        filter: '.btn-info-action, .btn-edit-action, .btn-delete-action, button',
+        preventOnFilter: false,
         onEnd: async function () {
             await reorderProductsFromDOM();
         }
@@ -730,10 +720,8 @@ async function reorderProductsFromDOM() {
             categoryCounters[cat] = (categoryCounters[cat] || 0) + 1;
             const newOrder = categoryCounters[cat];
 
-            // Sincronización local
             product.order = newOrder;
 
-            // Objeto completo para Supabase (evita error de campo 'name' nulo)
             updatedPayload.push({ 
                 id: product.id,
                 name: product.name,
@@ -753,7 +741,7 @@ async function reorderProductsFromDOM() {
         if (error) throw error;
         
         showAlert('✅ Orden actualizado', 'success');
-        displayProducts(); // Esto refresca los números # en las tarjetas
+        displayProducts();
     } catch (error) {
         console.error('Error:', error);
         showAlert('Error al guardar: ' + error.message, 'error');
@@ -764,7 +752,6 @@ async function reorderProductsFromDOM() {
 // HACER FUNCIONES GLOBALES PARA LOS BOTONES DEL HTML
 // =================================================================
 
-// Hacer las funciones disponibles globalmente para los onclick del HTML
 window.exportProducts = exportProducts;
 window.importProducts = importProducts;
 window.resetToDefault = resetToDefault;

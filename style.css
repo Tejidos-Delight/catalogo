@@ -579,7 +579,7 @@ footer { background-color: var(--secondary-color); color: #fcebe3; padding: 40px
     font-size: 0.72em; /* Texto un poco más pequeño para evitar saltos de línea */
     margin: 0 !important;
     width: 100%;
-    text-transform: uppercase;
+    /* ELIMINADO text-transform: uppercase */
     font-weight: bold;
     border-radius: 4px;
     display: flex;
@@ -646,7 +646,9 @@ footer { background-color: var(--secondary-color); color: #fcebe3; padding: 40px
 .admin-card-container img {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    /* MODIFICADO: object-fit: contain para evitar recortes */
+    object-fit: contain;
+    background-color: #f5f5f5;
 }
 
 /* Botones en una sola fila: Usamos un contenedor específico */
@@ -662,12 +664,12 @@ footer { background-color: var(--secondary-color); color: #fcebe3; padding: 40px
     flex: 1;
     padding: 6px 2px;
     font-size: 0.7em;
-    text-transform: uppercase;
     font-weight: bold;
     cursor: pointer;
     border-radius: 4px;
     border: 1px solid rgba(0,0,0,0.1);
     margin: 0 !important; /* Evita que hereden márgenes externos */
+    /* ELIMINADO text-transform: uppercase */
 }
 
 .btn-info-action { background: #f1f2f6; color: #2f3542; }
@@ -690,7 +692,7 @@ footer { background-color: var(--secondary-color); color: #fcebe3; padding: 40px
     position: relative; /* Necesario para el badge */
 }
 
-/* Etiquetas de categoría sobre la imagen */
+/* Etiquetas de categoría sobre la imagen - COLORES SUAVES */
 .admin-card-container {
     position: relative;
     overflow: hidden;
@@ -713,16 +715,16 @@ footer { background-color: var(--secondary-color); color: #fcebe3; padding: 40px
     background: rgba(0, 0, 0, 0.6);
 }
 
-/* Colores por categoría */
-.badge-amigurumis { background: #ff6b6b; }
-.badge-flores { background: #fab1a0; }
-.badge-llaveros { background: #0984e3; }
-.badge-pulseras { background: #6c5ce7; }
-.badge-colgantes { background: #fdcb6e; }
-.badge-combos { background: #e17055; }
-.badge-bolsas { background: #fd79a8; }
-.badge-macetas { background: #00b894; }
-.badge-adicionales { background: #636e72; }
+/* Colores por categoría - PALETA DISTINTIVA Y CONCEPTUAL */
+.badge-amigurumis { background: #FF6B6B; }      /* Coral cálido (amigurumis) */
+.badge-flores { background: #FF69B4; }          /* Rosa intenso (flores) */
+.badge-llaveros { background: #FFD700; }        /* Dorado metálico (llaveros) */
+.badge-pulseras { background: #1E88E5; }        /* Azul vibrante (pulseras) */
+.badge-colgantes { background: #1ABC9C; }       /* Turquesa (colgantes) */
+.badge-combos { background: #8E44AD; }          /* Púrpura (combos) */
+.badge-bolsas { background: #8B4513; }          /* Marrón tierra (bolsas) */
+.badge-macetas { background: #2ECC71; }         /* Verde fresco (macetas) */
+.badge-adicionales { background: #95A5A6; }     /* Gris neutro (adicionales) */
 
 /* Ocultar detalles por defecto */
 .product-extra-info {
