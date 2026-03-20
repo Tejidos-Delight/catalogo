@@ -163,5 +163,47 @@
     </footer>
 
     <script src="main.js"></script>
+    <script>
+        // Rotación de imagen principal con efecto fade
+        (function() {
+            // Lista de imágenes y sus textos alternativos
+            const imagenes = [
+                { src: "imagenes/amigurumis.jpg", alt: "Amigurumis tejidos a mano - Animales y personajes de crochet" },
+                { src: "imagenes/girasol.jpg", alt: "Flores y ramos tejidos - Girasoles de crochet" },
+                { src: "imagenes/capibara.jpg", alt: "Llaveros tejidos personalizados - Capibara" },
+                { src: "imagenes/pulseras.jpg", alt: "Pulseras artesanales tejidas - Brazaletes de crochet" },
+                { src: "imagenes/colgante.jpg", alt: "Colgantes tejidos para decoración - Adornos artesanales" },
+                { src: "imagenes/bolsahellokitty.jpg", alt: "Bolsas tejidas a mano - Diseño Hello Kitty" },
+                { src: "imagenes/macetagirasol.jpg", alt: "Macetas decoradas con tejidos - Girasol" },
+                { src: "imagenes/personalizado.jpg", alt: "Artículos adicionales tejidos - Complementos únicos" }
+            ];
+            let indiceActual = 0;
+            const imgElement = document.querySelector('.main-product-img');
+            
+            // Pre-carga de imágenes para evitar parpadeos
+            imagenes.forEach(img => {
+                const preload = new Image();
+                preload.src = img.src;
+            });
+            
+            // Cambia la imagen cada 5 segundos
+            function cambiarImagen() {
+                indiceActual = (indiceActual + 1) % imagenes.length;
+                // Fade out
+                imgElement.style.opacity = '0';
+                // Una vez oculta, cambiamos el src y hacemos fade in
+                setTimeout(() => {
+                    imgElement.src = imagenes[indiceActual].src;
+                    imgElement.alt = imagenes[indiceActual].alt;
+                    imgElement.style.opacity = '1';
+                }, 500); // La transición dura 0.5s
+            }
+            
+            // Iniciar rotación después de que la página esté completamente cargada
+            window.addEventListener('load', () => {
+                setInterval(cambiarImagen, 5000);
+            });
+        })();
+    </script>
 </body>
 </html>
