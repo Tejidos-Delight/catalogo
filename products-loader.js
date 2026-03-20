@@ -1,4 +1,4 @@
-// products-loader.js - CORREGIDO
+// products-loader.js - VERSIÓN CORREGIDA (incluye categoría "adicionales")
 console.log('🔧 products-loader.js cargado');
 
 async function loadAndRenderProducts() {
@@ -92,33 +92,41 @@ async function loadAndRenderProducts() {
 
         const products = await response.json();
 
-        // Determinar categoría actual
+        // Determinar categoría actual basada en el nombre del archivo HTML
         const path = window.location.pathname;
         const fileName = path.split('/').pop().replace('.html', '');
         
+        // MAPA DE CATEGORÍAS ACTUALIZADO (incluye "adicionales")
         const categoryMap = {
-            'amigurumis': 'amigurumis', 'flores': 'flores', 'llaveros': 'llaveros', 
-            'pulseras': 'pulseras', 'colgantes': 'colgantes', 'combos': 'combos', 
-            'bolsas': 'bolsas', 'macetas': 'macetas'
+            'amigurumis': 'amigurumis',
+            'flores': 'flores',
+            'llaveros': 'llaveros',
+            'pulseras': 'pulseras',
+            'colgantes': 'colgantes',
+            'combos': 'combos',
+            'bolsas': 'bolsas',
+            'macetas': 'macetas',
+            'adicionales': 'adicionales'   // ← CORRECCIÓN AQUÍ
         };
         
         const currentCategory = categoryMap[fileName];
         
         if (!currentCategory) {
-             // Si la categoría no existe, igual muestra la cuadrícula (vacía)
+            // Categoría no reconocida: mostrar mensaje de error
+            productGrid.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:40px; color:#d9534f;">⚠️ Categoría no válida. Verifica el nombre del archivo.</div>';
             productGrid.classList.add('loaded');
             return;
         }
 
-        // Filtrar y ordenar productos
+        // Filtrar y ordenar productos de la categoría actual
         const categoryProducts = products
             .filter(p => p.category === currentCategory)
             .sort((a, b) => (a.product_order || 999) - (b.product_order || 999));
 
         if (categoryProducts.length === 0) {
-            productGrid.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:40px;">No hay productos</div>';
+            productGrid.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:40px;">✨ No hay productos en esta categoría todavía. ¡Vuelve pronto!</div>';
         } else {
-            // RENDERIZAR con estilos adecuados
+            // Renderizar productos
             productGrid.innerHTML = categoryProducts.map(product => `
                 <div class="product-card" data-category="${product.type === 'standard' ? 'estandar' : 'personalizados'}">
                     <img src="${product.image_url}" alt="${product.name}" 
@@ -137,14 +145,14 @@ async function loadAndRenderProducts() {
                             </svg>
                         </button>
                         <button class="product-action-btn view-btn product-link" 
-                        data-name="${product.name}" 
-                        data-price="${product.price}" 
-                        data-img="${product.image_url}" 
-                        data-type="${product.type}"
-                        data-category="${product.category}"  // ← AGREGAR ESTA LÍNEA
-                        data-size-config='${JSON.stringify(product.size_config || {})}'
-                        data-packaging-config='${JSON.stringify(product.packaging_config || {})}'
-                        title="Ver detalles">
+                            data-name="${product.name}" 
+                            data-price="${product.price}" 
+                            data-img="${product.image_url}" 
+                            data-type="${product.type}"
+                            data-category="${product.category}"
+                            data-size-config='${JSON.stringify(product.size_config || {})}'
+                            data-packaging-config='${JSON.stringify(product.packaging_config || {})}'
+                            title="Ver detalles">
                             <svg width="20" height="20" viewBox="0 0 24 24">
                                 <use href="#icon-eye"></use>
                             </svg>
@@ -155,7 +163,7 @@ async function loadAndRenderProducts() {
 
             console.log('🎉 PRODUCTOS RENDERIZADOS CON ESTILOS');
             
-            // AGREGAR ESTO INMEDIATAMENTE DESPUÉS DE RENDERIZAR:
+            // Cargar favoritos después de renderizar
             setTimeout(() => {
                 if (window.loadFavoritesFromStorage) {
                     window.loadFavoritesFromStorage();
@@ -163,14 +171,11 @@ async function loadAndRenderProducts() {
             }, 100);
         }
 
-        // --- CORRECCIÓN 1: Mostrar la cuadrícula después de cargar ---
         productGrid.classList.add('loaded');
 
     } catch (error) {
-        console.error('Error:', error);
-        productGrid.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:40px; color:red;">Error cargando productos</div>';
-        
-        // --- CORRECCIÓN 2: Mostrar la cuadrícula incluso si hay error ---
+        console.error('Error cargando productos:', error);
+        productGrid.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:40px; color:red;">❌ Error al cargar los productos. Intenta de nuevo.</div>';
         productGrid.classList.add('loaded');
     }
 }
@@ -180,26 +185,21 @@ document.addEventListener('DOMContentLoaded', loadAndRenderProducts);
 setTimeout(loadAndRenderProducts, 1000);
 window.loadAndRenderProducts = loadAndRenderProducts;
 
-// ... (todo el código existente)
-
-// AGREGAR ESTO AL FINAL DEL ARCHIVO:
+// Función auxiliar para recargar favoritos después de renderizar
 function triggerFavoritesReload() {
     if (window.loadFavoritesFromStorage) {
         window.loadFavoritesFromStorage();
     } else {
-        // Si la función no está disponible aún, esperar un poco
         setTimeout(triggerFavoritesReload, 100);
     }
 }
 
-// Después de renderizar los productos, actualizar favoritos
 window.updateProductFavorites = function() {
     if (window.loadFavoritesFromStorage) {
         window.loadFavoritesFromStorage();
     }
 };
 
-// Llamar a la actualización después de renderizar
 window.loadAndRenderProducts = async function() {
     await loadAndRenderProducts();
     setTimeout(triggerFavoritesReload, 200);
