@@ -349,42 +349,50 @@ async function deleteProduct(id) {
 
 function displayProducts(filteredProducts = null) {
     let productsToDisplay = filteredProducts || products;
-    
-    if (currentFilter !== 'all') {
-        productsToDisplay = productsToDisplay.filter(p => p.category === currentFilter);
-    }
-    
+    if (currentFilter !== 'all') productsToDisplay = productsToDisplay.filter(p => p.category === currentFilter);
     productsToDisplay = sortProducts(productsToDisplay, currentSort);
+
     const container = document.getElementById('products-container');
-    
     if (productsToDisplay.length === 0) {
-        container.innerHTML = '<p class="no-products">No hay productos para mostrar en esta categoría.</p>';
+        container.innerHTML = '<p class="no-products">No hay productos para mostrar.</p>';
         return;
     }
-    
+
     container.innerHTML = productsToDisplay.map((product, index) => {
-        const isFirst = index === 0;
-        const isLast = index === productsToDisplay.length - 1;
+        const displayOrder = product.order || (index + 1);
         return `
         <div class="admin-product-card" data-product-id="${product.id}">
-            <img src="${product.image}" alt="${product.name}" onerror="this.src='../imagenes/personalizado.jpg'">
-            <h3>${product.name}</h3>
-            <p><strong>Categoría:</strong> ${getCategoryName(product.category)}</p>
+            <div class="order-badge">#${displayOrder}</div>
+            <div class="admin-card-container">
+                <img src="${product.image}" onerror="this.src='../imagenes/personalizado.jpg'">
+                <div class="category-badge badge-${product.category}">${getCategoryName(product.category)}</div>
+            </div>
+            <h3 style="margin: 5px 0; font-size: 0.9em;">${product.name}</h3>
             <p><strong>Precio:</strong> ${product.price}</p>
-            <p><strong>Tipo:</strong> ${product.type === 'standard' ? 'Estándar' : 'Personalizado'}</p>
-            <p><strong>Tamaño:</strong> ${getSizeDisplay(product.sizeConfig)}</p>
-            <p><strong>Empaque:</strong> ${getPackagingDisplay(product.packagingConfig)}</p>
-            <p><strong>Orden:</strong> ${product.order || 'No definido'}</p>
-            <div class="admin-product-actions">
-                <button class="btn-move-up" data-id="${product.id}" ${isFirst ? 'disabled' : ''}>⬆</button>
-                <button class="btn-move-down" data-id="${product.id}" ${isLast ? 'disabled' : ''}>⬇</button>
-                <button class="btn-edit" data-id="${product.id}">Editar</button>
-                <button class="btn-delete" data-id="${product.id}">Eliminar</button>
+            
+            <div id="details-${product.id}" class="product-extra-info">
+                <p><strong>Tamaño:</strong> ${getSizeDisplay(product.sizeConfig)}</p>
+                <p><strong>Empaque:</strong> ${getPackagingDisplay(product.packagingConfig)}</p>
+            </div>
+
+            <div class="admin-product-actions-group">
+                <button class="btn-info-action" onclick="toggleDetails('${product.id}')">Info</button>
+                <button class="btn-edit-action btn-edit" data-id="${product.id}">Editar</button>
+                <button class="btn-delete-action btn-delete" data-id="${product.id}">Borrar</button>
             </div>
         </div>
     `}).join('');
+    
+    initDragAndDrop();
 }
 
+// Nueva función global para expandir detalles
+window.toggleDetails = function(id) {
+    const details = document.getElementById(`details-${id}`);
+    const btn = details.nextElementSibling;
+    const isShowing = details.classList.toggle('show');
+    btn.textContent = isShowing ? 'Ver menos' : 'Ver más';
+};
 
 function getCategoryName(category) {
     const categories = {
@@ -682,6 +690,74 @@ function togglePackagingOptions() {
     const isCustom = document.querySelector('input[name="packaging-type"][value="customizable"]').checked;
     if (isCustom) { customizableOptions.classList.remove('hidden'); }
     else { customizableOptions.classList.add('hidden'); }
+}
+
+// Variable para la instancia
+let sortableInstance = null;
+
+function initDragAndDrop() {
+    const container = document.getElementById('products-container');
+    if (!container || currentSort !== 'order-asc') return;
+
+    if (sortableInstance) sortableInstance.destroy();
+
+    sortableInstance = Sortable.create(container, {
+        animation: 150,
+        scroll: true,
+        scrollSensitivity: 150, // Se activa el scroll a 150px del borde
+        scrollSpeed: 20,
+        bubbleScroll: true,
+        ghostClass: 'sortable-ghost',
+        chosenClass: 'sortable-chosen',
+        handle: '.admin-product-card',
+        onEnd: async function () {
+            await reorderProductsFromDOM();
+        }
+    });
+}
+
+async function reorderProductsFromDOM() {
+    const cards = document.querySelectorAll('.admin-product-card');
+    const categoryCounters = {};
+    const updatedPayload = [];
+
+    cards.forEach((card) => {
+        const productId = card.dataset.productId;
+        const product = products.find(p => p.id === productId);
+        
+        if (product) {
+            const cat = product.category;
+            categoryCounters[cat] = (categoryCounters[cat] || 0) + 1;
+            const newOrder = categoryCounters[cat];
+
+            // Sincronización local
+            product.order = newOrder;
+
+            // Objeto completo para Supabase (evita error de campo 'name' nulo)
+            updatedPayload.push({ 
+                id: product.id,
+                name: product.name,
+                category: product.category,
+                price: product.price,
+                type: product.type,
+                image_url: product.image,
+                size_config: product.sizeConfig,
+                packaging_config: product.packagingConfig,
+                product_order: newOrder 
+            });
+        }
+    });
+
+    try {
+        const { error } = await sbClient.from('products').upsert(updatedPayload, { onConflict: 'id' });
+        if (error) throw error;
+        
+        showAlert('✅ Orden actualizado', 'success');
+        displayProducts(); // Esto refresca los números # en las tarjetas
+    } catch (error) {
+        console.error('Error:', error);
+        showAlert('Error al guardar: ' + error.message, 'error');
+    }
 }
 
 // =================================================================

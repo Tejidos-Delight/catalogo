@@ -555,23 +555,197 @@ footer { background-color: var(--secondary-color); color: #fcebe3; padding: 40px
 
 /* Estilos para el arrastre en el admin */
 .admin-product-card {
-    cursor: grab; /* Indica que se puede agarrar */
-    transition: transform 0.2s ease;
+    position: relative;
+    padding: 10px;
+    cursor: grab;
+    user-select: none; /* Evita selección de texto al arrastrar */
+    touch-action: none; /* Mejora arrastre en móviles */
 }
 
 .admin-product-card:active {
     cursor: grabbing;
 }
+/* Alineación de los 3 botones en una sola fila compacta */
+.admin-product-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr; /* Tres columnas de igual ancho */
+    gap: 4px;
+    margin-top: 12px;
+}
+
+/* Ajuste de los botones para que quepan bien */
+.btn-details, .btn-edit, .btn-delete {
+    padding: 6px 2px;
+    font-size: 0.72em; /* Texto un poco más pequeño para evitar saltos de línea */
+    margin: 0 !important;
+    width: 100%;
+    text-transform: uppercase;
+    font-weight: bold;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Compactar la información del producto */
+.admin-product-card h3 {
+    font-size: 0.9em;
+    margin: 8px 0 4px 0;
+    min-height: auto; 
+}
+
+.admin-product-card p {
+    margin: 1px 0;
+    font-size: 0.82em;
+}
 
 /* Estilo del "fantasma" (el espacio vacío mientras arrastras) */
 .sortable-ghost {
-    opacity: 0.4;
-    border: 2px dashed var(--primary-color);
-    background-color: var(--accent-color);
+    opacity: 0.3;
+    border: 2px dashed var(--primary-color) !important;
+    background-color: var(--accent-color) !important;
+}
+
+#logout-btn {
+    width: auto !important; /* Evita que ocupe toda la fila */
+    display: inline-block;
+    margin: 0;
 }
 
 /* Estilo de la tarjeta que se está moviendo */
 .sortable-chosen {
     background-color: #f0f0f0;
     box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+}
+
+/* Badge de orden: Corrección para que no ocupe toda la fila */
+.order-badge {
+    position: absolute;
+    top: 5px;
+    left: 5px;
+    background: var(--primary-color);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.75em;
+    font-weight: bold;
+    z-index: 10;
+    width: auto; /* Asegura que no se estire */
+    display: inline-block;
+}
+
+/* Contenedor de imagen y categoría */
+.admin-card-container {
+    position: relative;
+    height: 140px;
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 8px;
+}
+
+.admin-card-container img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Botones en una sola fila: Usamos un contenedor específico */
+.admin-product-actions-group {
+    display: flex;
+    gap: 4px;
+    margin-top: 10px;
+    justify-content: space-between;
+}
+
+/* Estilo solo para los botones internos de la tarjeta, sin tocar los globales */
+.admin-product-actions-group button {
+    flex: 1;
+    padding: 6px 2px;
+    font-size: 0.7em;
+    text-transform: uppercase;
+    font-weight: bold;
+    cursor: pointer;
+    border-radius: 4px;
+    border: 1px solid rgba(0,0,0,0.1);
+    margin: 0 !important; /* Evita que hereden márgenes externos */
+}
+
+.btn-info-action { background: #f1f2f6; color: #2f3542; }
+.btn-edit-action { background: #3498db; color: white; }
+.btn-delete-action { background: #e74c3c; color: white; }
+
+/* Información extra oculta */
+.product-extra-info {
+    display: none;
+    font-size: 0.8em;
+    text-align: left;
+    background: #f9f9f9;
+    padding: 5px;
+    border-radius: 4px;
+    margin-bottom: 5px;
+}
+.product-extra-info.show { display: block; }
+
+.admin-product-card {
+    position: relative; /* Necesario para el badge */
+}
+
+/* Etiquetas de categoría sobre la imagen */
+.admin-card-container {
+    position: relative;
+    overflow: hidden;
+    border-radius: 8px;
+    height: 150px;
+    margin-bottom: 10px;
+}
+
+.category-badge {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    padding: 4px 8px;
+    color: white;
+    font-size: 0.75em;
+    font-weight: bold;
+    text-align: center;
+    text-transform: uppercase;
+    background: rgba(0, 0, 0, 0.6);
+}
+
+/* Colores por categoría */
+.badge-amigurumis { background: #ff6b6b; }
+.badge-flores { background: #fab1a0; }
+.badge-llaveros { background: #0984e3; }
+.badge-pulseras { background: #6c5ce7; }
+.badge-colgantes { background: #fdcb6e; }
+.badge-combos { background: #e17055; }
+.badge-bolsas { background: #fd79a8; }
+.badge-macetas { background: #00b894; }
+.badge-adicionales { background: #636e72; }
+
+/* Ocultar detalles por defecto */
+.product-extra-info {
+    display: none;
+    padding-top: 10px;
+    border-top: 1px solid #eee;
+    margin-top: 10px;
+    text-align: left;
+    font-size: 0.85em;
+}
+
+.product-extra-info.show {
+    display: block;
+}
+
+.btn-details {
+    background: #f1f2f6;
+    border: 1px solid #dfe4ea;
+    color: #2f3542;
+    width: 100%;
+    padding: 5px;
+    margin-top: 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 600;
 }
