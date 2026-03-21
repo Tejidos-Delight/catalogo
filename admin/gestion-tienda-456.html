@@ -266,6 +266,44 @@
             padding: 40px 20px;
             grid-column: 1 / -1;
         }
+
+        /* Ajuste para checkbox de promoción */
+        .promotion-active-checkbox label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .checkbox-label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+        .inline-checkbox {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: normal;
+        }
+        /* Estilos para checkboxes en línea */
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .checkbox-label {
+            font-weight: 600;
+            margin: 0;
+            width: 250px; /* Ajusta según tu preferencia */
+        }
+        .checkbox-inline {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-weight: normal;
+        }
     </style>
 </head>
 <body>
@@ -478,19 +516,24 @@
                 <button class="admin-btn" onclick="resetToDefault()" style="background: #e74c3c;">Restablecer a Valores Predeterminados</button>
             </div>
         </div>
+        
+        <!-- Sección: Promociones (mejorada) -->
         <div id="promotions-section" class="admin-section">
             <h2>Gestión de Promociones</h2>
             
             <form id="promotion-form">
                 <input type="hidden" id="promotion-id">
+                
                 <div class="form-group">
                     <label>Nombre de la promoción</label>
                     <input type="text" id="promotion-name" required>
                 </div>
+                
                 <div class="form-group">
-                    <label>Texto del banner</label>
+                    <label>Texto del banner (se muestra en la parte superior)</label>
                     <input type="text" id="promotion-banner" required placeholder="Ej: ¡10% OFF en 3 productos o más!">
                 </div>
+                
                 <div class="form-group">
                     <label>Tipo de descuento</label>
                     <select id="promotion-type">
@@ -498,21 +541,53 @@
                         <option value="fixed">Cantidad fija ($)</option>
                     </select>
                 </div>
+                
                 <div class="form-group">
                     <label>Valor</label>
                     <input type="number" id="promotion-value" step="0.01" required>
                 </div>
+                
                 <div class="form-group">
                     <label>Cantidad mínima de productos</label>
                     <input type="number" id="promotion-min-qty" min="1" value="3" required>
                 </div>
-                <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="promotion-active" checked> Activa
+                
+                <!-- Opciones de visualización (con la estructura correcta) -->
+                <div class="form-group checkbox-group">
+                    <span class="checkbox-label">Mostrar banner (texto en la parte superior)</span>
+                    <label class="checkbox-inline">
+                        <input type="checkbox" id="promotion-show-banner" checked> Sí
                     </label>
                 </div>
-                <button type="submit" class="admin-btn">Guardar Promoción</button>
-                <button type="button" id="cancel-promo-btn" class="admin-btn" style="background:#6c757d; display:none;">Cancelar</button>
+                
+                <div class="form-group checkbox-group">
+                    <span class="checkbox-label">Mostrar modal con imagen</span>
+                    <label class="checkbox-inline">
+                        <input type="checkbox" id="promotion-show-modal"> Sí
+                    </label>
+                </div>
+
+                <div id="promotion-image-group" class="form-group" style="display: none;">
+                    <label>Imagen para modal</label>
+                    <div class="file-upload">
+                        <input type="file" id="promotion-image" accept="image/*">
+                        <label for="promotion-image" class="file-upload-label">Seleccionar imagen</label>
+                    </div>
+                    <img id="promotion-image-preview" class="preview-image" src="" alt="Vista previa">
+                    <input type="hidden" id="promotion-image-url">
+                </div>
+
+                <div class="form-group checkbox-group">
+                    <span class="checkbox-label">Activa</span>
+                    <label class="checkbox-inline">
+                        <input type="checkbox" id="promotion-active" checked>
+                    </label>
+                </div>
+
+                <div class="form-group">
+                    <button type="submit" id="submit-promo" class="admin-btn">Guardar Promoción</button>
+                    <button type="button" id="cancel-promo-btn" class="admin-btn" style="background:#6c757d; display:none;">Cancelar</button>
+                </div>
             </form>
 
             <hr>
@@ -540,6 +615,5 @@
         </footer>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <script src="admin.js" type="module"></script>
-
 </body>
 </html>

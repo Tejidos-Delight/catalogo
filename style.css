@@ -266,6 +266,22 @@ main { padding: 20px 15px 40px 15px; background: white; }
     font-size: 0.85em;
     flex: 1;
 }
+
+/* Ajuste para checkbox en promociones */
+.promotion-active-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+#promo-modal-overlay {
+    animation: fadeIn 0.3s ease;
+}
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
 .btn-share svg {
     fill: white;
 }
@@ -768,4 +784,30 @@ footer { background-color: var(--secondary-color); color: #fcebe3; padding: 40px
     border-radius: 4px;
     cursor: pointer;
     font-weight: 600;
+}
+
+/* ==================================================== */
+/* ESTILOS PARA CHECKBOXES DEL PANEL DE ADMIN */
+/* ==================================================== */
+.checkbox-group {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    flex-wrap: wrap;
+    margin-bottom: 15px;
+}
+.checkbox-label {
+    font-weight: 600;
+    min-width: 250px;
+}
+.checkbox-inline {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-weight: normal;
+    cursor: pointer;
+}
+.checkbox-inline input {
+    width: auto;
+    margin: 0;
 }
