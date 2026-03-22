@@ -195,7 +195,6 @@ async function loadAndRenderProducts() {
 
 // Inicialización
 document.addEventListener('DOMContentLoaded', loadAndRenderProducts);
-setTimeout(loadAndRenderProducts, 1000);
 window.loadAndRenderProducts = loadAndRenderProducts;
 
 // Función auxiliar para recargar favoritos después de renderizar

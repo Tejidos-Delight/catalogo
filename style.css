@@ -90,16 +90,15 @@ header:not(.hero-container) {
 }
 /* FONDO CON HUMO SUAVE - REEMPLAZA LOS ROMBOS */
 /* Fondo suave sin repeticiones */
-header:not(.hero-container)::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: radial-gradient(ellipse at 30% 40%, rgba(255,255,255,0.4) 0%, transparent 70%);
-    pointer-events: none;
-    opacity: 0.6;
+header:not(.hero-container) {
+    background: linear-gradient(135deg, var(--accent-color), #f8d7c9, #ffe6dc);
+    background-size: 200% 200%;
+    animation: softShift 16s ease infinite;
+}
+@keyframes softShift {
+    0% { background-position: 0% 100%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
 }
 
 /* MEJORA EN LA DISPOSICIÓN DEL CONTENIDO */
@@ -213,7 +212,11 @@ main { padding: 20px 15px 40px 15px; background: white; }
     justify-content: space-between; height: 100%; overflow: hidden;
 }
 .category-card::before, .product-card::before { display: none; }
-.category-card:hover, .product-card:hover { transform: translateY(-5px); box-shadow: 0 15px 25px rgba(0,0,0,0.1); z-index: 10; }
+.product-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
 .category-card img, .product-card img {
     width: 100%; 
     height: 160px; 
@@ -882,3 +885,20 @@ footer { background-color: var(--secondary-color); color: #fcebe3; padding: 40px
     padding: 5px;
     border-radius: 4px;
 }
+
+.product-card {
+    opacity: 0;
+    transform: translateY(15px);
+    animation: fadeInUp 0.5s ease forwards;
+}
+@keyframes fadeInUp {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+/* Retrasos escalonados según el orden de los productos */
+.product-card:nth-child(1) { animation-delay: 0.05s; }
+.product-card:nth-child(2) { animation-delay: 0.1s; }
+.product-card:nth-child(3) { animation-delay: 0.15s; }
+/* ... puedes generar hasta el número que necesites, o usar SCSS/LESS */
