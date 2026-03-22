@@ -334,15 +334,27 @@ details.instructions-toggle summary:hover { color: var(--primary-color); }
 .modal-add-to-cart:disabled { background: #ccc; cursor: not-allowed; }
 
 .modal-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
-.btn-whatsapp, .btn-instagram {
-    width: 100%; padding: 10px 5px; border: none; border-radius: 6px;
-    color: white; font-weight: 600; cursor: pointer;
-    display: flex; align-items: center; justify-content: center; 
-    gap: 5px; font-size: 0.85em; white-space: nowrap;
+.btn-whatsapp,
+.btn-instagram,
+.btn-share {
+    width: 100%;
+    padding: 10px 5px;          /* Mismo padding que los otros */
+    border: none;
+    border-radius: 6px;
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    font-size: 0.75em;
+    white-space: nowrap;        /* Evita que el texto se parta */
 }
 .btn-whatsapp { background: #25D366; }
+.btn-share { background: #3498db; }
 .btn-instagram { background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); }
-.btn-whatsapp svg, .btn-instagram svg {
+.btn-whatsapp svg, .btn-instagram svg, .btn-share svg{
     width: 18px; height: 18px; fill: white; flex-shrink: 0;
 }
 
@@ -479,6 +491,7 @@ footer { background-color: var(--secondary-color); color: #fcebe3; padding: 40px
     
     .modal-content { display: grid; grid-template-columns: 1.1fr 1.3fr; gap: 30px; }
     .modal-actions { flex-direction: row; }
+    .modal-actions button { flex: 1; }
     .modal-image-container { height: 380px; }
     
     nav { justify-content: center; }
