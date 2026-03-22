@@ -3,12 +3,28 @@ console.log('🔧 products-loader.js cargado');
 
 async function loadAndRenderProducts() {
     console.log('🎯 Iniciando carga directa de productos...');
-    
+
     const productGrid = document.querySelector('.product-grid');
     if (!productGrid) {
         console.error('❌ No se encuentra .product-grid');
         return;
     }
+
+    // Mostrar esqueleto de carga (mismo tamaño que los productos reales)
+    const skeletonCount = 12; // puedes ajustar según la cantidad esperada
+    const skeletonCards = Array(skeletonCount).fill().map(() => `
+        <div class="product-card skeleton-card">
+            <div class="skeleton-img"></div>
+            <div class="skeleton-title"></div>
+            <div class="skeleton-price"></div>
+            <div class="skeleton-actions">
+                <div class="skeleton-btn"></div>
+                <div class="skeleton-btn"></div>
+                <div class="skeleton-btn"></div>
+            </div>
+        </div>
+    `).join('');
+    productGrid.innerHTML = skeletonCards;
 
     // Agregar estilos críticos si no existen
     if (!document.querySelector('#critical-styles')) {

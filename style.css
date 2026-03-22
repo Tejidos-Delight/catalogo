@@ -182,6 +182,7 @@ main { padding: 20px 15px 40px 15px; background: white; }
     gap: 15px; 
     max-width: 1300px; 
     margin: 0 auto;
+    min-height: 400px; /* opcional, para que el esqueleto tenga espacio */
 }
 /* MANTENER CONSISTENCIA VISUAL DURANTE BÚSQUEDA */
 .product-card {
@@ -1090,4 +1091,59 @@ nav {
     right: 20px;
     z-index: 900;
     display: block !important;
+}
+
+/* ==================================================== */
+/* SKELETON LOADING - COINCIDENTE CON TARJETAS REALES */
+/* ==================================================== */
+.product-card.skeleton-card {
+    opacity: 0.8;
+    pointer-events: none;
+}
+
+.skeleton-img {
+    width: 100%;
+    height: 160px; /* misma altura que las imágenes reales */
+    background: #e0e0e0;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+.skeleton-title {
+    height: 1.2em;
+    width: 80%;
+    background: #e0e0e0;
+    border-radius: 4px;
+    margin: 10px auto 5px;
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+.skeleton-price {
+    height: 1em;
+    width: 50%;
+    background: #e0e0e0;
+    border-radius: 4px;
+    margin: 5px auto;
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+.skeleton-actions {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 10px;
+}
+
+.skeleton-btn {
+    width: 30px;
+    height: 30px;
+    background: #e0e0e0;
+    border-radius: 50%;
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 0.6; }
+    50% { opacity: 1; }
+    100% { opacity: 0.6; }
 }
