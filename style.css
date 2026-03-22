@@ -147,7 +147,7 @@ nav {
     fill: #999;
 }
 .back-btn { 
-    display: inline-block; margin: 20px 0 10px 5px; text-decoration: none; 
+    display: inline-block; margin: 10px 0 10px 0; text-decoration: none; 
     color: var(--secondary-color); font-weight: 600; font-size: 0.9em;
     background-color: var(--accent-color); padding: 8px 16px; border-radius: 20px;
     transition: var(--transition);
@@ -434,7 +434,7 @@ details.instructions-toggle summary:hover { color: var(--primary-color); }
     width: 100%;
     max-width: 400px;
 }
-.cart-header { padding: 15px; background: var(--accent-color); display: flex; justify-content: space-between; align-items: center; }
+.cart-header { padding-left: 15px; background: var(--accent-color); display: flex; justify-content: space-between; align-items: center; }
 .cart-items { flex: 1; padding: 15px; overflow-y: auto; }
 
 .cart-item { display: flex; align-items: center; padding: 10px 0; border-bottom: 1px solid #eee; gap: 12px; }
@@ -455,13 +455,13 @@ details.instructions-toggle summary:hover { color: var(--primary-color); }
 .btn-checkout:hover { background-color: var(--primary-dark); transform: translateY(-2px); }
 .btn-continue { width: 100%; padding: 12px; background: transparent; color: var(--primary-color); border: 2px solid var(--primary-color); border-radius: 8px; cursor: pointer; font-weight: 600; }
 
-.payment-options { display: flex; gap: 10px; margin: 10px 0; }
+.payment-options { display: flex; gap: 10px; margin: 5px 0; }
 .payment-option { padding: 8px; border: 1px solid #ddd; border-radius: 6px; flex: 1; text-align: center; cursor: pointer; transition: var(--transition); }
 .payment-option.selected { border-color: var(--primary-color); background: #fff5f5; }
 .payment-option img { width: 24px !important; height: 24px !important; margin: 0 auto 4px; display: block; object-fit: contain; }
 .payment-option div { font-size: 0.75em; font-weight: 600; }
 
-.cart-footer { padding: 20px; border-top: 1px solid #eee; background: #fafafa; }
+.cart-footer { padding: 15px; border-top: 1px solid #eee; background: #fafafa; }
 .overlay { 
     display: none; 
     position: fixed; 
@@ -1011,4 +1011,83 @@ footer { background-color: var(--secondary-color); color: #fcebe3; padding: 40px
         font-size: 0.75em;
         padding: 5px 12px;
     }
+}
+
+/* ==================================================== */
+/* FILTROS DE NAVEGACIÓN - LAYOUT RESPONSIVE */
+/* ==================================================== */
+
+/* Estilo por defecto (escritorio) */
+nav {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    padding: 10px;
+    background-color: var(--white);
+    border-bottom: 1px solid #eee;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.filter-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+}
+
+/* Para pantallas pequeñas: buscador arriba, botones debajo con scroll horizontal */
+@media (max-width: 768px) {
+    nav {
+        width: 100%;                     /* Asegura que el nav ocupe todo el ancho disponible */
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+        padding: 10px;
+    }
+
+    .search-box {
+        width: 98%;
+        max-width: none;
+        margin: 0 auto;
+    }
+
+    .filter-buttons {
+        width: 100%;                     /* Evita que se expanda más allá del nav */
+        display: flex;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        justify-content: flex-start;
+        gap: 3px;
+        padding: 0 5px;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: thin;
+    }
+
+    .nav-btn {
+        flex-shrink: 0;
+        white-space: nowrap;
+    }
+}
+/* Ocultar scrollbar en WebKit (Chrome, Safari, Edge) */
+.filter-buttons::-webkit-scrollbar,
+.category-bar::-webkit-scrollbar {
+    display: none;  /* Oculta la barra en WebKit */
+}
+
+/* Ocultar scrollbar en Firefox */
+.filter-buttons,
+.category-bar {
+    scrollbar-width: none;  /* Oculta la barra en Firefox */
+}
+/* Fijar carrito para que siempre sea visible */
+.cart-container {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 900;
+    display: block !important;
 }
