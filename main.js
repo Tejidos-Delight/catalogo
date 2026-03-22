@@ -168,6 +168,29 @@ document.addEventListener("DOMContentLoaded", () => {
         return `ORD-${year}${month}${day}-${random}`;
     }
 
+    // Función para guardar orden en Supabase
+    async function saveOrderToSupabase(orderData) {
+        const SUPABASE_URL = 'https://egjlhlkholudjpjesunj.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVnamxobGtob2x1ZGpwamVzdW5qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5MzA5NDAsImV4cCI6MjA3NzUwNjk0MH0.KSIKD0QdwxO2GTXl60SiXz32y-AQlEi-CIsLBRsU_wg';
+        try {
+            const response = await fetch(`${SUPABASE_URL}/rest/v1/orders`, {
+                method: 'POST',
+                headers: {
+                    'apikey': SUPABASE_KEY,
+                    'Authorization': `Bearer ${SUPABASE_KEY}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(orderData)
+            });
+            if (!response.ok) throw new Error('Error guardando orden');
+            console.log('Orden guardada:', orderData.order_number);
+            return true;
+        } catch (error) {
+            console.error('Error al guardar orden:', error);
+            return false;
+        }
+    }
+
     function createElementFromHTML(htmlString) {
         const div = document.createElement('div');
         div.innerHTML = htmlString.trim();
@@ -525,7 +548,6 @@ document.addEventListener("DOMContentLoaded", () => {
             const promo = promotions[0];
             const totalQuantity = cart.reduce((sum, item) => sum + item.quantity, 0);
             if (totalQuantity >= promo.min_quantity) {
-                // Calcular subtotal (sin descuento)
                 const subtotal = cart.reduce((sum, item) => sum + (parseFloat(item.price.replace('$', '')) || 0) * item.quantity, 0);
                 if (promo.type === 'percentage') {
                     discountAmount = subtotal * (promo.value / 100);
@@ -543,7 +565,7 @@ document.addEventListener("DOMContentLoaded", () => {
         // 3. Generar número de orden
         const orderNumber = generateOrderNumber();
 
-        // 4. Construir el array de items (para guardar en DB)
+        // 4. Construir el array de items
         const itemsData = cart.map(item => ({
             name: item.name,
             price: item.price,
@@ -566,28 +588,14 @@ document.addEventListener("DOMContentLoaded", () => {
             promo_text: promoApplied ? `Descuento ${promoApplied.type === 'percentage' ? `${promoApplied.value}%` : `$${promoApplied.value}`} por ${promoApplied.min_quantity}+ productos` : null
         };
 
-        // 6. Guardar en Supabase (¡importante! hacerlo antes de enviar el mensaje)
-        const SUPABASE_URL = 'https://egjlhlkholudjpjesunj.supabase.co';
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVnamxobGtob2x1ZGpwamVzdW5qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5MzA5NDAsImV4cCI6MjA3NzUwNjk0MH0.KSIKD0QdwxO2GTXl60SiXz32y-AQlEi-CIsLBRsU_wg';
-        try {
-            const response = await fetch(`${SUPABASE_URL}/rest/v1/orders`, {
-                method: 'POST',
-                headers: {
-                    'apikey': SUPABASE_KEY,
-                    'Authorization': `Bearer ${SUPABASE_KEY}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(orderData)
-            });
-            if (!response.ok) throw new Error('Error guardando orden');
-            console.log('Orden guardada:', orderNumber);
-        } catch (error) {
-            console.error('Error al guardar orden:', error);
+        // 6. Guardar en Supabase usando la función auxiliar
+        const saved = await saveOrderToSupabase(orderData);
+        if (!saved) {
             alert('No se pudo registrar tu pedido. Intenta de nuevo.');
             return;
         }
 
-        // 7. Construir el mensaje para WhatsApp/Instagram (incluyendo número de orden y descuento)
+        // 7. Construir el mensaje (igual que antes)
         const productsByCategory = {};
         cart.forEach(item => {
             let category = item.category || "productos";
@@ -619,7 +627,6 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         });
 
-        // Agregar subtotal, descuento y total
         msg += `💰 *Subtotal: $${subtotal.toFixed(2)}*\n`;
         if (discountAmount > 0) {
             msg += `🎉 *Descuento aplicado: -$${discountAmount.toFixed(2)}*\n`;
@@ -746,52 +753,152 @@ document.addEventListener("DOMContentLoaded", () => {
     // ============================================================
     // WHATSAPP E INSTAGRAM DESDE MODAL
     // ============================================================
-    function sendWhatsApp() {
-        if(!validateForm()) { showFavoritesMessage('Completa los campos'); return; }
-        const {size, packaging} = getFormData();
-        const categoryNames = {
-            "amigurumis": "Amigurumi", "flores": "Flor", "llaveros": "Llavero",
-            "pulseras": "Pulsera", "colgantes": "Colgante", "bolsas": "Bolsa",
-            "macetas": "Maceta", "combos": "Combo", "productos": "Producto"
+    async function sendWhatsApp() {
+        if (!validateForm()) { showFavoritesMessage('Completa los campos'); return; }
+        const { size, packaging } = getFormData();
+        const quantity = currentQuantity;
+        const priceText = modalPrice.textContent;
+        const priceValue = parseFloat(priceText.replace('$', '')) || 0;
+        const subtotal = priceValue * quantity;
+
+        // Obtener promociones activas
+        const promotions = await fetchActivePromotions();
+        let discountAmount = 0;
+        let promoApplied = null;
+        if (promotions.length > 0) {
+            const promo = promotions[0];
+            if (quantity >= promo.min_quantity) {
+                if (promo.type === 'percentage') {
+                    discountAmount = subtotal * (promo.value / 100);
+                } else if (promo.type === 'fixed') {
+                    discountAmount = promo.value;
+                }
+                promoApplied = promo;
+            }
+        }
+        const total = subtotal - discountAmount;
+
+        // Generar número de orden
+        const orderNumber = generateOrderNumber();
+
+        // Datos de la orden (un solo producto)
+        const itemsData = [{
+            name: currentProductName,
+            price: priceText,
+            quantity: quantity,
+            size: size,
+            packaging: packaging,
+            category: currentProductCategory
+        }];
+
+        const orderData = {
+            order_number: orderNumber,
+            items: itemsData,
+            subtotal: subtotal,
+            discount_amount: discountAmount,
+            total: total,
+            payment_method: 'whatsapp',
+            status: 'pendiente',
+            promo_id: promoApplied?.id || null,
+            promo_text: promoApplied ? `Descuento ${promoApplied.type === 'percentage' ? `${promoApplied.value}%` : `$${promoApplied.value}`} por ${promoApplied.min_quantity}+ productos` : null
         };
-        const categoryEmojis = {
-            "amigurumis": "🐻", "flores": "🌷", "llaveros": "🔑", "pulseras": "📿",
-            "colgantes": "✨", "bolsas": "🛍️", "macetas": "🏺", "combos": "🎁", "productos": "📦"
-        };
-        const category = categoryNames[currentProductCategory] || "Producto";
-        const emoji = categoryEmojis[currentProductCategory] || "📦";
-        let msg = `¡Hola! ${emoji} Me interesa este *${category}*:\n\n`;
-        msg += `*${currentProductName.trim()}* (${modalPrice.textContent})\n\n`;
-        if(size !== 'N/A') msg += `*Tamaño:* ${size}\n`;
-        msg += `*Empaque:* ${packaging}\n`;
-        msg += `*Cantidad:* ${currentQuantity}`;
+
+        // Guardar en Supabase
+        const saved = await saveOrderToSupabase(orderData);
+        if (!saved) {
+            alert('No se pudo registrar tu pedido. Intenta de nuevo.');
+            return;
+        }
+
+        // Construir el mensaje con descuento y número de orden
+        let msg = `¡Hola! Me interesa este producto:\n\n`;
+        msg += `*${currentProductName.trim()}* (${priceText}) x${quantity}\n`;
+        if (size !== 'N/A') msg += `*Tamaño:* ${size}\n`;
+        msg += `*Empaque:* ${packaging}\n\n`;
+        msg += `💰 *Subtotal: $${subtotal.toFixed(2)}*\n`;
+        if (discountAmount > 0) {
+            msg += `🎉 *Descuento aplicado: -$${discountAmount.toFixed(2)}*\n`;
+            if (promoApplied) msg += `   (${promoApplied.banner_text})\n`;
+        }
+        msg += `💵 *Total: $${total.toFixed(2)}*\n\n`;
+        msg += `🆔 *Número de orden: ${orderNumber}*\n\n`;
+        msg += `¡Gracias! Espero tu respuesta para coordinar la entrega.`;
+
+        // Enviar mensaje
         const encodedMsg = encodeURIComponent(msg);
         window.open(`https://api.whatsapp.com/send?phone=593999406153&text=${encodedMsg}`, '_blank');
     }
 
-    function sendInstagram() {
-        if(!validateForm()) { showFavoritesMessage('Completa campos'); return; }
-        const {size, packaging} = getFormData();
-        const categoryNames = {
-            "amigurumis": "Amigurumi", "flores": "Flor", "llaveros": "Llavero",
-            "pulseras": "Pulsera", "colgantes": "Colgante", "bolsas": "Bolsa",
-            "macetas": "Maceta", "combos": "Combo", "productos": "Producto"
+    async function sendInstagram() {
+        if (!validateForm()) { showFavoritesMessage('Completa campos'); return; }
+        const { size, packaging } = getFormData();
+        const quantity = currentQuantity;
+        const priceText = modalPrice.textContent;
+        const priceValue = parseFloat(priceText.replace('$', '')) || 0;
+        const subtotal = priceValue * quantity;
+
+        const promotions = await fetchActivePromotions();
+        let discountAmount = 0;
+        let promoApplied = null;
+        if (promotions.length > 0) {
+            const promo = promotions[0];
+            if (quantity >= promo.min_quantity) {
+                if (promo.type === 'percentage') {
+                    discountAmount = subtotal * (promo.value / 100);
+                } else if (promo.type === 'fixed') {
+                    discountAmount = promo.value;
+                }
+                promoApplied = promo;
+            }
+        }
+        const total = subtotal - discountAmount;
+
+        const orderNumber = generateOrderNumber();
+
+        const itemsData = [{
+            name: currentProductName,
+            price: priceText,
+            quantity: quantity,
+            size: size,
+            packaging: packaging,
+            category: currentProductCategory
+        }];
+
+        const orderData = {
+            order_number: orderNumber,
+            items: itemsData,
+            subtotal: subtotal,
+            discount_amount: discountAmount,
+            total: total,
+            payment_method: 'instagram',
+            status: 'pendiente',
+            promo_id: promoApplied?.id || null,
+            promo_text: promoApplied ? `Descuento ${promoApplied.type === 'percentage' ? `${promoApplied.value}%` : `$${promoApplied.value}`} por ${promoApplied.min_quantity}+ productos` : null
         };
-        const categoryEmojis = {
-            "amigurumis": "🧸", "flores": "🌷", "llaveros": "🔑", "pulseras": "📿",
-            "colgantes": "✨", "bolsas": "👜", "macetas": "🌱", "combos": "🎁", "productos": "📦"
-        };
-        const category = categoryNames[currentProductCategory] || "Producto";
-        const emoji = categoryEmojis[currentProductCategory] || "📦";
-        let msg = `${emoji} Me interesa este ${category}:\n\n`;
-        msg += `${currentProductName} (${modalPrice.textContent})\n\n`;
-        if(size !== 'N/A') msg += `Tamaño: ${size}\n`;
-        msg += `Empaque: ${packaging}\nCantidad: ${currentQuantity}`;
+
+        const saved = await saveOrderToSupabase(orderData);
+        if (!saved) {
+            alert('No se pudo registrar tu pedido. Intenta de nuevo.');
+            return;
+        }
+
+        // Mensaje para Instagram (sin markdown)
+        let msg = `Me interesa este producto:\n\n`;
+        msg += `${currentProductName} (${priceText}) x${quantity}\n`;
+        if (size !== 'N/A') msg += `Tamaño: ${size}\n`;
+        msg += `Empaque: ${packaging}\n\n`;
+        msg += `Subtotal: $${subtotal.toFixed(2)}\n`;
+        if (discountAmount > 0) {
+            msg += `Descuento: -$${discountAmount.toFixed(2)}\n`;
+            if (promoApplied) msg += ` (${promoApplied.banner_text})\n`;
+        }
+        msg += `Total: $${total.toFixed(2)}\n\n`;
+        msg += `Número de orden: ${orderNumber}`;
+
         navigator.clipboard.writeText(msg);
-        alert("Mensaje copiado. Pégalo en Instagram.");
+        alert("Mensaje copiado. Pégalo en Instagram.\nNúmero de orden: " + orderNumber);
         window.open('https://ig.me/m/tejidosdelight', '_blank');
     }
-
     // ============================================================
     // COMPARTIR PRODUCTO
     // ============================================================
