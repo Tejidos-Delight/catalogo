@@ -599,14 +599,14 @@
         <div id="orders-section" class="admin-section">
             <h2>Gestión de Órdenes</h2>
             
-            <div class="admin-filters">
-                <div class="admin-filter-group">
+            <div class="admin-filters" style="display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap;">
+                <div class="admin-filter-group" style="flex: 1;">
                     <label for="search-order">Buscar por número de orden:</label>
-                    <input type="text" id="search-order" placeholder="Ej: ORD-20250321-1234" onkeyup="filterOrders()">
+                    <input type="text" id="search-order" placeholder="Ej: ORD-20250321-1234" onkeyup="filterOrders()" style="width: 100%;">
                 </div>
-                <div class="admin-filter-group">
+                <div class="admin-filter-group" style="flex: 1;">
                     <label for="filter-order-status">Filtrar por estado:</label>
-                    <select id="filter-order-status" onchange="filterOrders()">
+                    <select id="filter-order-status" onchange="filterOrders()" style="width: 100%;">
                         <option value="all">Todos</option>
                         <option value="pendiente">Pendiente</option>
                         <option value="aceptada">Aceptada</option>
@@ -615,7 +615,7 @@
                     </select>
                 </div>
                 <div class="admin-filter-group">
-                    <button class="admin-btn" onclick="refreshOrders()">⟳ Actualizar</button>
+                    <button class="admin-btn" onclick="refreshOrders()" style="height: 38px; white-space: nowrap;">⟳ Actualizar</button>
                 </div>
             </div>
             

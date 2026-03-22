@@ -811,12 +811,9 @@ function renderOrdersList() {
     if (!container) return;
     
     let filteredOrders = [...orders];
-    
-    // Filtrar por estado
     if (currentOrderFilter !== 'all') {
         filteredOrders = filteredOrders.filter(o => o.status === currentOrderFilter);
     }
-    // Filtrar por número de orden (búsqueda)
     if (currentOrderSearch.trim() !== '') {
         const searchTerm = currentOrderSearch.trim().toLowerCase();
         filteredOrders = filteredOrders.filter(o => o.order_number.toLowerCase().includes(searchTerm));
@@ -827,12 +824,14 @@ function renderOrdersList() {
         return;
     }
     
-    // Función para formatear fecha en zona horaria de Ecuador
+    // Función para formatear fecha en Ecuador
     const formatLocalDate = (utcDate) => {
         const date = new Date(utcDate);
-        return date.toLocaleString('es-EC', { timeZone: 'America/Guayaquil' });
+        // Restar 5 horas (18000000 milisegundos) para GMT-5
+        const localDate = new Date(date.getTime() - (5 * 60 * 60 * 1000));
+        return localDate.toLocaleString('es-EC', { hour12: true });
     };
-    
+        
     container.innerHTML = filteredOrders.map(order => {
         const itemsHTML = order.items.map(item => 
             `<li>${item.name} (${item.price}) x${item.quantity} | Tamaño: ${item.size || 'N/A'} | Empaque: ${item.packaging || 'N/A'}</li>`

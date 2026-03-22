@@ -152,10 +152,15 @@ nav {
     fill: #999;
 }
 .back-btn { 
-    display: inline-block; margin: 20px 0 10px 15px; text-decoration: none; 
+    display: inline-block; margin: 20px 0 10px 5px; text-decoration: none; 
     color: var(--secondary-color); font-weight: 600; font-size: 0.9em;
     background-color: var(--accent-color); padding: 8px 16px; border-radius: 20px;
     transition: var(--transition);
+}
+@media (min-width: 768px) {
+    .back-btn {
+        margin-left: 75px;
+    }
 }
 .back-btn:hover {
     background-color: var(--primary-color);
