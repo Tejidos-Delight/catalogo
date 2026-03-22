@@ -158,6 +158,16 @@ document.addEventListener("DOMContentLoaded", () => {
     // ============================================================
     // CARRITO Y FUNCIONES COMUNES
     // ============================================================
+    
+    function generateOrderNumber() {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+        return `ORD-${year}${month}${day}-${random}`;
+    }
+
     function createElementFromHTML(htmlString) {
         const div = document.createElement('div');
         div.innerHTML = htmlString.trim();
@@ -503,10 +513,81 @@ document.addEventListener("DOMContentLoaded", () => {
     // ============================================================
     // CHECKOUT Y MÉTODOS DE PAGO
     // ============================================================
-    function proceedToCheckout() {
+    async function proceedToCheckout() {
         if (cart.length === 0) return alert('El carrito está vacío');
-        if (!selectedPaymentMethod) return alert('Por favor, selecciona un método de contacto (WhatsApp o Instagram)');
-        
+        if (!selectedPaymentMethod) return alert('Selecciona un método de contacto');
+
+        // 1. Obtener promociones activas para calcular descuento
+        const promotions = await fetchActivePromotions();
+        let discountAmount = 0;
+        let promoApplied = null;
+        if (promotions.length > 0) {
+            const promo = promotions[0];
+            const totalQuantity = cart.reduce((sum, item) => sum + item.quantity, 0);
+            if (totalQuantity >= promo.min_quantity) {
+                // Calcular subtotal (sin descuento)
+                const subtotal = cart.reduce((sum, item) => sum + (parseFloat(item.price.replace('$', '')) || 0) * item.quantity, 0);
+                if (promo.type === 'percentage') {
+                    discountAmount = subtotal * (promo.value / 100);
+                } else if (promo.type === 'fixed') {
+                    discountAmount = promo.value;
+                }
+                promoApplied = promo;
+            }
+        }
+
+        // 2. Calcular total final
+        const subtotal = cart.reduce((sum, item) => sum + (parseFloat(item.price.replace('$', '')) || 0) * item.quantity, 0);
+        const total = subtotal - discountAmount;
+
+        // 3. Generar número de orden
+        const orderNumber = generateOrderNumber();
+
+        // 4. Construir el array de items (para guardar en DB)
+        const itemsData = cart.map(item => ({
+            name: item.name,
+            price: item.price,
+            quantity: item.quantity,
+            size: item.size,
+            packaging: item.packaging,
+            category: item.category
+        }));
+
+        // 5. Crear el objeto de la orden
+        const orderData = {
+            order_number: orderNumber,
+            items: itemsData,
+            subtotal: subtotal,
+            discount_amount: discountAmount,
+            total: total,
+            payment_method: selectedPaymentMethod,
+            status: 'pendiente',
+            promo_id: promoApplied?.id || null,
+            promo_text: promoApplied ? `Descuento ${promoApplied.type === 'percentage' ? `${promoApplied.value}%` : `$${promoApplied.value}`} por ${promoApplied.min_quantity}+ productos` : null
+        };
+
+        // 6. Guardar en Supabase (¡importante! hacerlo antes de enviar el mensaje)
+        const SUPABASE_URL = 'https://egjlhlkholudjpjesunj.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVnamxobGtob2x1ZGpwamVzdW5qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5MzA5NDAsImV4cCI6MjA3NzUwNjk0MH0.KSIKD0QdwxO2GTXl60SiXz32y-AQlEi-CIsLBRsU_wg';
+        try {
+            const response = await fetch(`${SUPABASE_URL}/rest/v1/orders`, {
+                method: 'POST',
+                headers: {
+                    'apikey': SUPABASE_KEY,
+                    'Authorization': `Bearer ${SUPABASE_KEY}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(orderData)
+            });
+            if (!response.ok) throw new Error('Error guardando orden');
+            console.log('Orden guardada:', orderNumber);
+        } catch (error) {
+            console.error('Error al guardar orden:', error);
+            alert('No se pudo registrar tu pedido. Intenta de nuevo.');
+            return;
+        }
+
+        // 7. Construir el mensaje para WhatsApp/Instagram (incluyendo número de orden y descuento)
         const productsByCategory = {};
         cart.forEach(item => {
             let category = item.category || "productos";
@@ -519,8 +600,8 @@ document.addEventListener("DOMContentLoaded", () => {
             if (!productsByCategory[formattedCategory]) productsByCategory[formattedCategory] = [];
             productsByCategory[formattedCategory].push(item);
         });
-        
-        let msg = "¡Hola! Me interesan los siguientes productos:\n\n";
+
+        let msg = `¡Hola! Me interesan los siguientes productos:\n\n`;
         const categoryOrder = ["AMIGURUMIS", "FLORES", "PULSERAS", "LLAVEROS", "COLGANTES", "BOLSAS", "MACETAS", "COMBOS", "PRODUCTOS"];
         const categoryEmojis = {
             "AMIGURUMIS": "🐻", "FLORES": "🌷", "PULSERAS": "📿", "LLAVEROS": "🔑",
@@ -537,22 +618,28 @@ document.addEventListener("DOMContentLoaded", () => {
                 msg += `\n`;
             }
         });
-        let total = 0;
-        cart.forEach(item => {
-            const priceVal = parseFloat(item.price.replace('$', '')) || 0;
-            total += priceVal * item.quantity;
-        });
-        msg += `💰 *Total: $${total.toFixed(2)}*\n\n`;
+
+        // Agregar subtotal, descuento y total
+        msg += `💰 *Subtotal: $${subtotal.toFixed(2)}*\n`;
+        if (discountAmount > 0) {
+            msg += `🎉 *Descuento aplicado: -$${discountAmount.toFixed(2)}*\n`;
+            if (promoApplied) msg += `   (${promoApplied.banner_text})\n`;
+        }
+        msg += `💵 *Total: $${total.toFixed(2)}*\n\n`;
+        msg += `🆔 *Número de orden: ${orderNumber}*\n\n`;
         msg += `¡Gracias! Espero tu respuesta para coordinar la entrega.`;
-        
+
+        // 8. Enviar mensaje según método
         if (selectedPaymentMethod === 'whatsapp') {
             const encodedMsg = encodeURIComponent(msg);
             window.open(`https://api.whatsapp.com/send?phone=593999406153&text=${encodedMsg}`, '_blank');
         } else {
             navigator.clipboard.writeText(msg);
-            alert("Mensaje copiado al portapapeles. Pégalo en el chat de Instagram.");
+            alert("Mensaje copiado al portapapeles. Pégalo en el chat de Instagram.\nNúmero de orden: " + orderNumber);
             window.open('https://ig.me/m/tejidosdelight', '_blank');
         }
+
+        // 9. Limpiar carrito
         cart = [];
         saveCartToStorage();
         updateCartCounter();

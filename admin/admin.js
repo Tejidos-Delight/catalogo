@@ -401,7 +401,21 @@ function showSection(sectionId) {
         updateCategoryFilter(); 
     }
     if (sectionId === 'promotions') {
-        loadPromotions();   // Recargar al abrir la pestaña
+        loadPromotions();
+    }
+    if (sectionId === 'orders') {
+        // Marcar que la sección de órdenes está visible
+        ordersSectionVisible = true;
+        loadOrders();
+        // Iniciar auto-refresco cada 30 segundos si no está ya corriendo
+        if (!ordersRefreshInterval) {
+            ordersRefreshInterval = setInterval(() => {
+                if (ordersSectionVisible) loadOrders();
+            }, 30000);
+        }
+    } else {
+        // Si cambiamos a otra sección, detenemos la visibilidad pero no el intervalo (lo dejamos corriendo para cuando vuelva)
+        ordersSectionVisible = false;
     }
 }
 
@@ -762,8 +776,160 @@ document.getElementById('promotion-image')?.addEventListener('change', function(
     } else preview.style.display = 'none';
 });
 
+
+
 document.getElementById('promotion-form')?.addEventListener('submit', savePromotion);
 document.getElementById('cancel-promo-btn')?.addEventListener('click', resetPromotionForm);
+
+// =================================================================
+// GESTIÓN DE ÓRDENES
+// =================================================================
+
+let orders = [];
+let currentOrderFilter = 'all';
+let currentOrderSearch = '';
+let ordersRefreshInterval = null;
+let ordersSectionVisible = false;
+
+async function loadOrders() {
+    try {
+        const { data, error } = await sbClient
+            .from('orders')
+            .select('*')
+            .order('created_at', { ascending: false });
+        if (error) throw error;
+        orders = data || [];
+        renderOrdersList();
+    } catch (error) {
+        console.error('Error cargando órdenes:', error);
+        showAlert('Error al cargar órdenes', 'error');
+    }
+}
+
+function renderOrdersList() {
+    const container = document.getElementById('orders-list');
+    if (!container) return;
+    
+    let filteredOrders = [...orders];
+    
+    // Filtrar por estado
+    if (currentOrderFilter !== 'all') {
+        filteredOrders = filteredOrders.filter(o => o.status === currentOrderFilter);
+    }
+    // Filtrar por número de orden (búsqueda)
+    if (currentOrderSearch.trim() !== '') {
+        const searchTerm = currentOrderSearch.trim().toLowerCase();
+        filteredOrders = filteredOrders.filter(o => o.order_number.toLowerCase().includes(searchTerm));
+    }
+    
+    if (filteredOrders.length === 0) {
+        container.innerHTML = '<p>No hay órdenes que coincidan con los filtros.</p>';
+        return;
+    }
+    
+    // Función para formatear fecha en zona horaria de Ecuador
+    const formatLocalDate = (utcDate) => {
+        const date = new Date(utcDate);
+        return date.toLocaleString('es-EC', { timeZone: 'America/Guayaquil' });
+    };
+    
+    container.innerHTML = filteredOrders.map(order => {
+        const itemsHTML = order.items.map(item => 
+            `<li>${item.name} (${item.price}) x${item.quantity} | Tamaño: ${item.size || 'N/A'} | Empaque: ${item.packaging || 'N/A'}</li>`
+        ).join('');
+        
+        return `
+            <div class="order-card" data-order-id="${order.id}">
+                <div class="order-header">
+                    <span class="order-number">${order.order_number}</span>
+                    <span class="order-date">${formatLocalDate(order.created_at)}</span>
+                    <span class="order-status status-${order.status}">${order.status.toUpperCase()}</span>
+                </div>
+                <div class="order-items">
+                    <strong>Productos:</strong>
+                    <ul style="margin: 5px 0 0 20px;">${itemsHTML}</ul>
+                </div>
+                <div><strong>Subtotal:</strong> $${order.subtotal?.toFixed(2) || '0.00'}</div>
+                ${order.discount_amount > 0 ? `<div><strong>Descuento:</strong> -$${order.discount_amount.toFixed(2)}</div>` : ''}
+                <div class="order-total"><strong>Total:</strong> $${order.total?.toFixed(2) || '0.00'}</div>
+                <div><strong>Método de contacto:</strong> ${order.payment_method === 'whatsapp' ? 'WhatsApp' : 'Instagram'}</div>
+                ${order.promo_text ? `<div><strong>Promoción aplicada:</strong> ${order.promo_text}</div>` : ''}
+                <div class="order-actions">
+                    <select class="order-status-select" data-id="${order.id}">
+                        <option value="pendiente" ${order.status === 'pendiente' ? 'selected' : ''}>Pendiente</option>
+                        <option value="aceptada" ${order.status === 'aceptada' ? 'selected' : ''}>Aceptada</option>
+                        <option value="completada" ${order.status === 'completada' ? 'selected' : ''}>Completada</option>
+                        <option value="cancelada" ${order.status === 'cancelada' ? 'selected' : ''}>Cancelada</option>
+                    </select>
+                    <button class="admin-btn delete-order-btn" data-id="${order.id}" style="background:#e74c3c;">Eliminar</button>
+                </div>
+            </div>
+        `;
+    }).join('');
+    
+    // Eventos para cambiar estado
+    document.querySelectorAll('.order-status-select').forEach(select => {
+        select.addEventListener('change', async (e) => {
+            const orderId = e.target.dataset.id;
+            const newStatus = e.target.value;
+            await updateOrderStatus(orderId, newStatus);
+        });
+    });
+    
+    // Eventos para eliminar orden
+    document.querySelectorAll('.delete-order-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            const orderId = e.target.dataset.id;
+            await deleteOrder(orderId);
+        });
+    });
+}
+
+async function updateOrderStatus(orderId, newStatus) {
+    try {
+        const { error } = await sbClient
+            .from('orders')
+            .update({ status: newStatus })
+            .eq('id', orderId);
+        if (error) throw error;
+        showAlert('Estado de orden actualizado', 'success');
+        loadOrders(); // recargar lista
+    } catch (error) {
+        console.error('Error actualizando estado:', error);
+        showAlert('Error al actualizar estado', 'error');
+    }
+}
+
+async function deleteOrder(orderId) {
+    if (!confirm('¿Eliminar esta orden permanentemente?')) return;
+    try {
+        const { error } = await sbClient
+            .from('orders')
+            .delete()
+            .eq('id', orderId);
+        if (error) throw error;
+        showAlert('Orden eliminada', 'success');
+        loadOrders(); // recargar lista
+    } catch (error) {
+        console.error('Error eliminando orden:', error);
+        showAlert('Error al eliminar', 'error');
+    }
+}
+
+function filterOrders() {
+    currentOrderFilter = document.getElementById('filter-order-status').value;
+    currentOrderSearch = document.getElementById('search-order').value;
+    renderOrdersList();
+}
+
+// Función para refrescar manualmente
+function refreshOrders() {
+    loadOrders();
+}
+
+// Exponer funciones globales
+window.filterOrders = filterOrders;
+window.refreshOrders = refreshOrders;
 
 // =================================================================
 // FUNCIONES GLOBALES PARA EL HTML

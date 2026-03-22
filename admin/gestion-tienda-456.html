@@ -323,11 +323,10 @@
             <button class="admin-btn" onclick="showSection('products')">Ver Productos</button>
             <button class="admin-btn" onclick="showSection('add-product')">Agregar Producto</button>
             <button class="admin-btn" onclick="showSection('promotions')">Promociones</button>
+            <button class="admin-btn" onclick="showSection('orders')">Órdenes</button>
             <button class="admin-btn" onclick="showSection('export')">Exportar/Importar</button>
-            <button class="admin-btn" onclick="window.location.href='../index.html'">Volver al Catálogo</button>
-            <button id="logout-btn" class="btn-delete" style="background-color: #c9302c; border: none; padding: 10px 15px; color: white; cursor: pointer;">
-                Cerrar Sesión
-            </button>
+            <button class="admin-btn" onclick="window.open('../index.html')">Volver al Catálogo</button>
+            <button id="logout-btn" class="admin-btn">Cerrar Sesión</button>
         </div>
         
         <div id="alert" class="alert"></div>
@@ -593,6 +592,34 @@
             <hr>
             <h3>Promociones Activas</h3>
             <div id="promotions-list"></div>
+        </div>
+
+        <!-- Sección de Órdenes de Compra -->
+
+        <div id="orders-section" class="admin-section">
+            <h2>Gestión de Órdenes</h2>
+            
+            <div class="admin-filters">
+                <div class="admin-filter-group">
+                    <label for="search-order">Buscar por número de orden:</label>
+                    <input type="text" id="search-order" placeholder="Ej: ORD-20250321-1234" onkeyup="filterOrders()">
+                </div>
+                <div class="admin-filter-group">
+                    <label for="filter-order-status">Filtrar por estado:</label>
+                    <select id="filter-order-status" onchange="filterOrders()">
+                        <option value="all">Todos</option>
+                        <option value="pendiente">Pendiente</option>
+                        <option value="aceptada">Aceptada</option>
+                        <option value="completada">Completada</option>
+                        <option value="cancelada">Cancelada</option>
+                    </select>
+                </div>
+                <div class="admin-filter-group">
+                    <button class="admin-btn" onclick="refreshOrders()">⟳ Actualizar</button>
+                </div>
+            </div>
+            
+            <div id="orders-list" class="orders-list"></div>
         </div>
     </div>
 
