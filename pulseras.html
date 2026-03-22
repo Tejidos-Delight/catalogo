@@ -271,6 +271,12 @@
             <!-- Los productos del carrito se insertarán aquí -->
         </div>
         <div class="cart-footer">
+            <div id="progress-container" style="margin-bottom: 15px; display: none;">
+                <div style="font-size: 0.85em; margin-bottom: 5px;">¡Faltan <span id="items-needed">0</span> productos para obtener descuento!</div>
+                <div style="background-color: #eee; border-radius: 10px; overflow: hidden;">
+                    <div id="progress-bar" style="width: 0%; height: 8px; background-color: #d9534f; transition: width 0.3s;"></div>
+                </div>
+            </div>
             <div class="payment-method">
                 <label>Contactar por:</label>
                 <div class="payment-options">
