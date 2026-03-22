@@ -65,6 +65,19 @@ document.addEventListener("DOMContentLoaded", () => {
     // Comportamiento de la modal: 'session', 'daily' o 'always'
     const PROMO_BEHAVIOR = 'session'; // Cambia aquí si quieres otro comportamiento
 
+    function showToast(message, type = 'info') {
+        const toast = document.createElement('div');
+        toast.className = `toast-notification ${type}`;
+        toast.textContent = message;
+        document.body.appendChild(toast);
+        // Pequeño retraso para que la animación funcione
+        setTimeout(() => toast.classList.add('show'), 10);
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => toast.remove(), 300);
+        }, 2500);
+    }
+
     // ============================================================
     // PROMOCIONES (banner + modal)
     // ============================================================
@@ -206,6 +219,8 @@ document.addEventListener("DOMContentLoaded", () => {
             if (cartTotalElement) cartTotalElement.textContent = '$0.00';
             const discountLine = document.querySelector('.cart-discount');
             if (discountLine) discountLine.remove();
+            const progressContainer = document.getElementById('progress-container');
+            if (progressContainer) progressContainer.style.display = 'none';
             return;
         }
         
@@ -248,6 +263,28 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }
         const total = subtotal - discount;
+        // Dentro de updateCartDisplay, después de obtener promotions y calcular discount
+        const progressContainer = document.getElementById('progress-container');
+        if (progressContainer) {
+            if (promotions.length > 0) {
+                const promo = promotions[0];
+                const totalQuantity = cart.reduce((sum, item) => sum + item.quantity, 0);
+                const needed = promo.min_quantity - totalQuantity;
+                const percent = Math.min(100, (totalQuantity / promo.min_quantity) * 100);
+                const itemsNeededSpan = document.getElementById('items-needed');
+                const progressBar = document.getElementById('progress-bar');
+                if (totalQuantity >= promo.min_quantity) {
+                    // Ya alcanzó el descuento
+                    progressContainer.style.display = 'none';
+                } else {
+                    progressContainer.style.display = 'block';
+                    itemsNeededSpan.textContent = needed;
+                    progressBar.style.width = `${percent}%`;
+                }
+            } else {
+                progressContainer.style.display = 'none';
+            }
+        }
         if (cartTotalElement) cartTotalElement.textContent = `$${total.toFixed(2)}`;
         
         let discountLine = document.querySelector('.cart-discount');
@@ -489,6 +526,7 @@ document.addEventListener("DOMContentLoaded", () => {
         let details = `Empaque: ${packaging}`;
         if (size !== 'N/A') details = `Tamaño: ${size}\n${details}`;
         addToCart(currentProductName, modalPrice.textContent, modalImg.src, details, currentQuantity, size, packaging);
+        showToast(`${currentProductName} añadido al carrito`, 'success');
         if (modalAddToCartBtn) {
             const originalText = isEditingCartItem ? '🛒 Actualizar Producto' : '🛒 Añadir al Carrito';
             modalAddToCartBtn.innerHTML = isEditingCartItem ? '✓ Actualizado' : '✓ Añadido';
