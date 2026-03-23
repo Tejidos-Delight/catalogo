@@ -958,7 +958,7 @@ document.addEventListener("DOMContentLoaded", () => {
         checkoutBtn.classList.toggle('checkout-disabled', !ok);
         if(ok) {
             checkoutBtn.className = selectedPaymentMethod === 'whatsapp' ? 'btn-checkout btn-checkout-whatsapp' : 'btn-checkout btn-checkout-instagram';
-            checkoutBtn.textContent = selectedPaymentMethod === 'whatsapp' ? 'Finalizar por WhatsApp' : 'Finalizar por Instagram';
+            checkoutBtn.textContent = selectedPaymentMethod === 'whatsapp' ? 'Finalizar Pedido' : 'Finalizar Pedido';
         } else checkoutBtn.textContent = 'Finalizar Pedido';
     }
 

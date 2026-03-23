@@ -1,8 +1,6 @@
 // products-loader.js - VERSIÓN CON EVENTO PERSONALIZADO
-console.log('🔧 products-loader.js cargado');
 
 async function loadAndRenderProducts() {
-    console.log('🎯 Iniciando carga directa de productos...');
 
     const productGrid = document.querySelector('.product-grid');
     if (!productGrid) {
@@ -182,8 +180,6 @@ async function loadAndRenderProducts() {
                     </div>
                 </div>
             `).join('');
-
-            console.log('🎉 PRODUCTOS RENDERIZADOS CON ESTILOS');
             
             // Cargar favoritos después de renderizar
             setTimeout(() => {
@@ -198,7 +194,6 @@ async function loadAndRenderProducts() {
         // DISPARAR EVENTO PERSONALIZADO PARA INDICAR QUE LOS PRODUCTOS ESTÁN LISTOS
         const productsLoadedEvent = new CustomEvent('productsLoaded', { detail: { products: categoryProducts } });
         window.dispatchEvent(productsLoadedEvent);
-        console.log('📢 Evento "productsLoaded" disparado');
 
     } catch (error) {
         console.error('Error cargando productos:', error);
