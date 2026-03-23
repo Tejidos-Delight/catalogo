@@ -166,23 +166,95 @@ nav {
 /* 5. GRID - MODIFICADO PARA 6 PRODUCTOS POR FILA */
 /* ==================================================== */
 main { padding: 20px 15px 40px 15px; background: white; }
+@media (min-width: 1400px) {
+    main {
+        padding: 30px 60px 60px 60px;
+    }
+
+    .categories-grid {
+        max-width: 100%;
+        padding: 0 60px;
+    }
+
+    /* Si usas algún contenedor interno con max-width, elimínalo o amplíalo */
+    .categoria-seccion h2 {
+        font-size: 2.5rem;
+    }
+
+    .modal-notes {
+        font-size: 0.9rem;
+    }
+}
 .categoria-seccion h2 {
     font-family: 'Josefin Sans', sans-serif; font-weight: 700;
     font-size: 2em; color: var(--secondary-color); text-align: center;
     margin-bottom: 30px; 
+}
+.categoria-seccion {
+    width: 100%;
+    max-width: 100%;
 }
 .categories-grid {
     display: grid; 
     grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
     gap: 20px; max-width: 1200px; margin: 0 auto;
 }
+/* ESTILO BASE (para móviles y tablets) */
 .product-grid {
     display: grid;
-    grid-template-columns: repeat(6, 1fr); /* 6 PRODUCTOS POR FILA */
-    gap: 15px; 
-    max-width: 1300px; 
+    grid-template-columns: repeat(2, 1fr);   /* 2 columnas en móviles */
+    gap: 15px;
+    max-width: 1300px;
     margin: 0 auto;
-    min-height: 400px; /* opcional, para que el esqueleto tenga espacio */
+    padding: 0 15px;   /* añadido para que no toque bordes en móvil */
+    min-height: 400px;
+}
+
+/* Tablets (≥ 768px) */
+@media (min-width: 768px) {
+    .product-grid {
+        grid-template-columns: repeat(3, 1fr);
+        padding: 0 20px;
+    }
+}
+
+/* Escritorio pequeño / portátiles (≥ 1024px) */
+@media (min-width: 1024px) {
+    .product-grid {
+        grid-template-columns: repeat(4, 1fr);
+        padding: 0 30px;
+    }
+}
+
+/* Escritorio grande (≥ 1400px) */
+@media (min-width: 1400px) {
+    .product-grid {
+        grid-template-columns: repeat(5, 1fr); /* 5 columnas */
+        gap: 25px;
+        max-width: 100%;
+        padding: 0 60px;
+    }
+
+    .product-card img {
+        height: 200px;        /* Imagen más grande */
+    }
+}
+
+/* Pantallas extra grandes (≥ 1920px) */
+@media (min-width: 1920px) {
+    .product-grid {
+        grid-template-columns: repeat(6, 1fr); /* 6 columnas si el monitor lo permite */
+        gap: 30px;
+        padding: 0 80px;
+    }
+
+    .product-card img {
+        height: 220px;
+    }
+
+    .product-card h3 {
+        font-size: 1.3rem;
+    }
 }
 /* MANTENER CONSISTENCIA VISUAL DURANTE BÚSQUEDA */
 .product-card {
@@ -1229,4 +1301,42 @@ nav {
 }
 .remove-coupon-btn:hover {
     opacity: 0.7;
+}
+
+/* CAMBIOS PARA PANTALLAS GRANDES */
+
+/* Pantallas grandes (≥ 1400px) */
+@media (min-width: 1400px) {
+    body {
+        font-size: 1.1rem;   /* Escala base */
+    }
+
+    header p {
+        font-size: 2.2em;    /* Ajusta el eslogan */
+    }
+
+    .product-card h3 {
+        font-size: 1.2rem;
+    }
+
+    .product-card .precio {
+        font-size: 1.3rem;
+    }
+
+    .modal-content {
+        max-width: 1100px;    /* Modal más grande */
+    }
+
+    .modal-image-container {
+        height: 450px;        /* Imagen más alta */
+    }
+
+    .modal-actions button {
+        font-size: 0.9rem;
+        padding: 12px;
+    }
+
+    .cart-sidebar {
+        width: 450px;         /* Carrito más ancho */
+    }
 }
