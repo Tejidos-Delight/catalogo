@@ -69,6 +69,49 @@ document.addEventListener("DOMContentLoaded", () => {
     const continueShoppingBtn = document.getElementById('continue-shopping');
     const favoritesMessage = document.getElementById('favorites-message');
 
+    // === METAETIQUETAS DINÁMICAS ===
+    let defaultMeta = {};
+    storeDefaultMeta();
+
+    function storeDefaultMeta() {
+        defaultMeta = {
+            title: document.title,
+            ogTitle: document.querySelector('meta[property="og:title"]')?.getAttribute('content') || '',
+            ogDescription: document.querySelector('meta[property="og:description"]')?.getAttribute('content') || '',
+            ogImage: document.querySelector('meta[property="og:image"]')?.getAttribute('content') || '',
+            twitterTitle: document.querySelector('meta[name="twitter:title"]')?.getAttribute('content') || '',
+            twitterDescription: document.querySelector('meta[name="twitter:description"]')?.getAttribute('content') || '',
+            twitterImage: document.querySelector('meta[name="twitter:image"]')?.getAttribute('content') || ''
+        };
+    }
+
+    function restoreDefaultMeta() {
+        document.title = defaultMeta.title;
+        setMeta('property', 'og:title', defaultMeta.ogTitle);
+        setMeta('property', 'og:description', defaultMeta.ogDescription);
+        setMeta('property', 'og:image', defaultMeta.ogImage);
+        setMeta('name', 'twitter:title', defaultMeta.twitterTitle);
+        setMeta('name', 'twitter:description', defaultMeta.twitterDescription);
+        setMeta('name', 'twitter:image', defaultMeta.twitterImage);
+    }
+
+    function setMeta(attr, name, value) {
+        const meta = document.querySelector(`meta[${attr}="${name}"]`);
+        if (meta) meta.setAttribute('content', value);
+    }
+
+    function updateMetaTagsForProduct(product) {
+        const absoluteImage = new URL(product.image_url, window.location.origin).href;
+        document.title = `${product.name} - Tejidos Delight`;
+        setMeta('property', 'og:title', product.name);
+        setMeta('property', 'og:description', `Mira este producto: ${product.name} - ${product.price}`);
+        setMeta('property', 'og:image', absoluteImage);
+        setMeta('name', 'twitter:title', product.name);
+        setMeta('name', 'twitter:description', `Mira este producto: ${product.name} - ${product.price}`);
+        setMeta('name', 'twitter:image', absoluteImage);
+    }
+
+
     // Comportamiento de la modal: 'session', 'daily' o 'always'
     const PROMO_BEHAVIOR = 'session'; // Cambia aquí si quieres otro comportamiento
 
@@ -640,6 +683,7 @@ document.addEventListener("DOMContentLoaded", () => {
         document.body.style.overflow = '';
         isEditingCartItem = false;
         editingCartItemName = "";
+        restoreDefaultMeta();
     }
 
     function validateForm() {
@@ -1179,6 +1223,7 @@ document.addEventListener("DOMContentLoaded", () => {
             console.log('🔍 Extracted product ID:', productId);
             if (window.currentProducts && window.currentProducts[productId]) {
                 const product = window.currentProducts[productId];
+                updateMetaTagsForProduct(product); 
                 const viewBtn = document.querySelector(`.product-link[data-id="${productId}"]`);
                 if (viewBtn) {
                     viewBtn.click();
@@ -1201,6 +1246,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }, 1500);
 
     function openModalFromData(product) {
+        updateMetaTagsForProduct(product); 
         const fakeLink = {
             dataset: {
                 name: product.name,
