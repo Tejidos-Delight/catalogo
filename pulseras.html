@@ -290,6 +290,20 @@
                 </div>
             </div>
             <div class="payment-method">
+                <div class="coupon-section">
+                    <label for="coupon-input">Cupón de descuento:</label>
+                    <div class="coupon-input-group">
+                        <input type="text" id="coupon-input" placeholder="Ingresa tu código">
+                        <button id="apply-coupon-btn">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M20 12V8H4v4M20 12v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-4M12 4v16M8 8h.01M16 16h.01" />
+                                <path d="M8 12h8" />
+                            </svg>
+                            Aplicar
+                        </button>
+                    </div>
+                    <div id="coupon-message"></div>
+                </div>
                 <label>Contactar por:</label>
                 <div class="payment-options">
                     <div class="payment-option selected" data-method="whatsapp">

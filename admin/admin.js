@@ -15,6 +15,7 @@ let currentSort = 'order-asc';
 const BUCKET_NAME = 'product-images';
 
 let promotions = [];
+let coupons = [];
 
 // =================================================================
 // INICIALIZACIÓN Y AUTENTICACIÓN
@@ -33,6 +34,7 @@ async function checkUserSession() {
         setupEventListeners();
         updateCategoryFilter();
         loadPromotions();               // Cargar promociones
+        loadCoupons();
     } else {
         window.location.href = 'acceso-seguro-789.html';
     }
@@ -83,6 +85,157 @@ function setupEventListeners() {
     document.getElementById('cancel-btn').addEventListener('click', resetForm);
     document.getElementById('search-products').addEventListener('keyup', filterProducts);
 }
+
+// =================================================================
+// GESTIÓN DE CUPONES
+// =================================================================
+
+async function loadCoupons() {
+    try {
+        const { data, error } = await sbClient
+            .from('coupons')
+            .select('*')
+            .order('created_at', { ascending: false });
+        if (error) throw error;
+        coupons = data || [];
+        renderCouponsList();
+    } catch (error) {
+        console.error('Error cargando cupones:', error);
+        showAlert('Error al cargar cupones', 'error');
+    }
+}
+
+function renderCouponsList() {
+    const container = document.getElementById('coupons-list');
+    if (!container) return;
+    if (coupons.length === 0) {
+        container.innerHTML = '<p>No hay cupones creados.</p>';
+        return;
+    }
+    container.innerHTML = coupons.map(coupon => `
+        <div class="coupon-card" style="border:1px solid #eee; padding:12px; margin-bottom:10px; border-radius:8px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <strong>${coupon.code}</strong>
+                <div>
+                    <button class="btn-edit-coupon" data-id="${coupon.id}">Editar</button>
+                    <button class="btn-delete-coupon" data-id="${coupon.id}">Eliminar</button>
+                    <button class="btn-toggle-coupon" data-id="${coupon.id}" data-active="${coupon.active}">
+                        ${coupon.active ? 'Desactivar' : 'Activar'}
+                    </button>
+                </div>
+            </div>
+            <p>${coupon.description || ''}</p>
+            <small>
+                Tipo: ${coupon.type === 'percentage' ? `${coupon.value}%` : `$${coupon.value}`}
+                | Compra mínima: $${coupon.min_purchase}
+                ${coupon.expires_at ? ` | Expira: ${new Date(coupon.expires_at).toLocaleString()}` : ''}
+                | Usos: ${coupon.used_count} / ${coupon.usage_limit || '∞'}
+            </small>
+        </div>
+    `).join('');
+
+    document.querySelectorAll('.btn-edit-coupon').forEach(btn => {
+        btn.addEventListener('click', () => editCoupon(btn.dataset.id));
+    });
+    document.querySelectorAll('.btn-delete-coupon').forEach(btn => {
+        btn.addEventListener('click', () => deleteCoupon(btn.dataset.id));
+    });
+    document.querySelectorAll('.btn-toggle-coupon').forEach(btn => {
+        btn.addEventListener('click', () => toggleCouponActive(btn.dataset.id, btn.dataset.active === 'true'));
+    });
+}
+
+async function saveCoupon(event) {
+    event.preventDefault();
+    const id = document.getElementById('coupon-id').value;
+    const code = document.getElementById('coupon-code').value.toUpperCase().trim();
+    const description = document.getElementById('coupon-description').value;
+    const type = document.getElementById('coupon-type').value;
+    const value = parseFloat(document.getElementById('coupon-value').value);
+    const min_purchase = parseFloat(document.getElementById('coupon-min-purchase').value) || 0;
+    const expires_at = document.getElementById('coupon-expires-at').value || null;
+    const usage_limit = document.getElementById('coupon-usage-limit').value ? parseInt(document.getElementById('coupon-usage-limit').value) : null;
+    const active = document.getElementById('coupon-active').checked;
+
+    const couponData = { code, description, type, value, min_purchase, expires_at, usage_limit, active };
+
+    try {
+        if (id) {
+            const { error } = await sbClient.from('coupons').update(couponData).eq('id', id);
+            if (error) throw error;
+            showAlert('Cupón actualizado', 'success');
+        } else {
+            const { error } = await sbClient.from('coupons').insert(couponData);
+            if (error) throw error;
+            showAlert('Cupón creado', 'success');
+        }
+        resetCouponForm();
+        loadCoupons();
+    } catch (error) {
+        console.error('Error guardando cupón:', error);
+        showAlert('Error al guardar', 'error');
+    }
+}
+
+function resetCouponForm() {
+    document.getElementById('coupon-form').reset();
+    document.getElementById('coupon-id').value = '';
+    document.getElementById('coupon-active').checked = true;
+    document.getElementById('coupon-expires-at').value = '';
+    document.getElementById('coupon-usage-limit').value = '';
+    document.getElementById('cancel-coupon-btn').style.display = 'none';
+    document.getElementById('coupon-code').focus();
+}
+
+async function editCoupon(id) {
+    const coupon = coupons.find(c => c.id === id);
+    if (!coupon) return;
+    document.getElementById('coupon-id').value = coupon.id;
+    document.getElementById('coupon-code').value = coupon.code;
+    document.getElementById('coupon-description').value = coupon.description || '';
+    document.getElementById('coupon-type').value = coupon.type;
+    document.getElementById('coupon-value').value = coupon.value;
+    document.getElementById('coupon-min-purchase').value = coupon.min_purchase;
+    if (coupon.expires_at) {
+        const date = new Date(coupon.expires_at);
+        document.getElementById('coupon-expires-at').value = date.toISOString().slice(0, 16);
+    } else {
+        document.getElementById('coupon-expires-at').value = '';
+    }
+    document.getElementById('coupon-usage-limit').value = coupon.usage_limit || '';
+    document.getElementById('coupon-active').checked = coupon.active;
+    document.getElementById('cancel-coupon-btn').style.display = 'inline-block';
+    showSection('coupons');
+}
+
+async function deleteCoupon(id) {
+    if (!confirm('¿Eliminar este cupón?')) return;
+    try {
+        const { error } = await sbClient.from('coupons').delete().eq('id', id);
+        if (error) throw error;
+        showAlert('Cupón eliminado', 'success');
+        loadCoupons();
+    } catch (error) {
+        console.error('Error eliminando:', error);
+        showAlert('Error al eliminar', 'error');
+    }
+}
+
+async function toggleCouponActive(id, currentActive) {
+    try {
+        const { error } = await sbClient.from('coupons').update({ active: !currentActive }).eq('id', id);
+        if (error) throw error;
+        showAlert(`Cupón ${!currentActive ? 'activado' : 'desactivado'}`, 'success');
+        loadCoupons();
+    } catch (error) {
+        console.error('Error toggling:', error);
+        showAlert('Error al cambiar estado', 'error');
+    }
+}
+
+// Eventos del formulario
+document.getElementById('coupon-form')?.addEventListener('submit', saveCoupon);
+document.getElementById('cancel-coupon-btn')?.addEventListener('click', resetCouponForm);
 
 // =================================================================
 // LÓGICA DE PRODUCTOS (guardado, eliminación, etc.)
@@ -402,6 +555,9 @@ function showSection(sectionId) {
     }
     if (sectionId === 'promotions') {
         loadPromotions();
+    }
+    if (sectionId === 'coupons') {
+        loadCoupons();
     }
     if (sectionId === 'orders') {
         // Marcar que la sección de órdenes está visible
@@ -850,9 +1006,11 @@ function renderOrdersList() {
                 </div>
                 <div><strong>Subtotal:</strong> $${order.subtotal?.toFixed(2) || '0.00'}</div>
                 ${order.discount_amount > 0 ? `<div><strong>Descuento:</strong> -$${order.discount_amount.toFixed(2)}</div>` : ''}
+                ${order.coupon_code ? `<div><strong>Cupón:</strong> ${order.coupon_code} ( -$${order.coupon_discount?.toFixed(2) || '0.00'} )</div>` : ''}
+                ${order.promo_text ? `<div><strong>Promoción aplicada:</strong> ${order.promo_text}</div>` : ''}
                 <div class="order-total"><strong>Total:</strong> $${order.total?.toFixed(2) || '0.00'}</div>
                 <div><strong>Método de contacto:</strong> ${order.payment_method === 'whatsapp' ? 'WhatsApp' : 'Instagram'}</div>
-                ${order.promo_text ? `<div><strong>Promoción aplicada:</strong> ${order.promo_text}</div>` : ''}
+                
                 <div class="order-actions">
                     <select class="order-status-select" data-id="${order.id}">
                         <option value="pendiente" ${order.status === 'pendiente' ? 'selected' : ''}>Pendiente</option>

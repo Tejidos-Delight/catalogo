@@ -2,6 +2,9 @@
 // ARCHIVO main.js (VERSIÓN FINAL - PROMOCIONES BANNER + MODAL)
 // =================================================================
 document.addEventListener("DOMContentLoaded", () => {
+    const SUPABASE_URL = 'https://egjlhlkholudjpjesunj.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVnamxobGtob2x1ZGpwamVzdW5qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5MzA5NDAsImV4cCI6MjA3NzUwNjk0MH0.KSIKD0QdwxO2GTXl60SiXz32y-AQlEi-CIsLBRsU_wg';
+    
     // --- Selectores DOM ---
     const modalOverlay = document.getElementById('modal-overlay');
     const modalCloseBtn = document.getElementById('modal-close');
@@ -46,7 +49,11 @@ document.addEventListener("DOMContentLoaded", () => {
     
     let cart = [];
     let favorites = [];
+    let modalPaymentOverlay = null;
     let selectedPaymentMethod = '';
+    let appliedCoupon = null;    // { code, type, value, discountAmount }
+    let couponDiscount = 0;
+
     
     // --- Elementos Globales UI ---
     const searchInput = document.getElementById('search-input');
@@ -82,8 +89,6 @@ document.addEventListener("DOMContentLoaded", () => {
     // PROMOCIONES (banner + modal)
     // ============================================================
     async function fetchActivePromotions() {
-        const SUPABASE_URL = 'https://egjlhlkholudjpjesunj.supabase.co';
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVnamxobGtob2x1ZGpwamVzdW5qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5MzA5NDAsImV4cCI6MjA3NzUwNjk0MH0.KSIKD0QdwxO2GTXl60SiXz32y-AQlEi-CIsLBRsU_wg';
         try {
             const response = await fetch(`${SUPABASE_URL}/rest/v1/promotions?select=*&active=eq.true`, {
                 headers: {
@@ -98,6 +103,63 @@ document.addEventListener("DOMContentLoaded", () => {
             console.error('Error cargando promociones:', error);
             return [];
         }
+    }
+
+    async function validateCoupon(code) {
+        try {
+            const response = await fetch(`${SUPABASE_URL}/rest/v1/coupons?code=eq.${encodeURIComponent(code)}&select=*`, {
+                headers: {
+                    'apikey': SUPABASE_KEY,
+                    'Authorization': `Bearer ${SUPABASE_KEY}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+            if (!response.ok) throw new Error('Error fetching coupon');
+            const data = await response.json();
+            if (data.length === 0) return { valid: false, message: 'Cupón no válido' };
+            const coupon = data[0];
+            // Verificar activo
+            if (!coupon.active) return { valid: false, message: 'Cupón no disponible' };
+            // Verificar expiración
+            if (coupon.expires_at && new Date(coupon.expires_at) < new Date()) {
+                return { valid: false, message: 'Cupón expirado' };
+            }
+            // Verificar límite de usos
+            if (coupon.usage_limit && coupon.used_count >= coupon.usage_limit) {
+                return { valid: false, message: 'Cupón agotado' };
+            }
+            // Verificar compra mínima (se calculará con el subtotal)
+            // Este cheque se hará después de calcular el subtotal actual
+            return { valid: true, coupon };
+        } catch (error) {
+            console.error('Error validando cupón:', error);
+            return { valid: false, message: 'Error al validar cupón' };
+        }
+    }
+
+    function applyCouponToCart(subtotal) {
+        if (!appliedCoupon) {
+            couponDiscount = 0;
+            return 0;
+        }
+        const coupon = appliedCoupon;
+        // Verificar compra mínima
+        if (subtotal < coupon.min_purchase) {
+            document.getElementById('coupon-message').textContent = `Compra mínima de $${coupon.min_purchase} no alcanzada`;
+            appliedCoupon = null;
+            couponDiscount = 0;
+            return 0;
+        }
+        let discount = 0;
+        if (coupon.type === 'percentage') {
+            discount = subtotal * (coupon.value / 100);
+        } else {
+            discount = coupon.value;
+        }
+        // Limitar descuento máximo al subtotal
+        discount = Math.min(discount, subtotal);
+        couponDiscount = discount;
+        return discount;
     }
 
     function showPromotionBanner(promo) {
@@ -168,6 +230,53 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     })();
 
+    function showPaymentModal() {
+        // Si ya existe, no crear otra
+        if (document.getElementById('payment-modal-overlay')) return;
+        
+        const modalHTML = `
+            <div id="payment-modal-overlay" class="payment-modal-overlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 10000; display: flex; align-items: center; justify-content: center;">
+                <div style="background: white; border-radius: 12px; padding: 20px; max-width: 300px; width: 90%; text-align: center;">
+                    <h3 style="margin-top: 0;">Selecciona método de contacto</h3>
+                    <button id="payment-whatsapp" style="background: #25D366; color: white; border: none; padding: 10px; border-radius: 8px; width: 100%; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893-.001-3.189-1.248-6.189-3.515-8.452"/></svg>
+                        WhatsApp
+                    </button>
+                    <button id="payment-instagram" style="background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); color: white; border: none; padding: 10px; border-radius: 8px; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+                        Instagram
+                    </button>
+                    <button id="close-payment-modal" style="background: #6c757d; color: white; border: none; padding: 8px; border-radius: 8px; width: 100%; margin-top: 10px;">Cancelar</button>
+                </div>
+            </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+        modalPaymentOverlay = document.getElementById('payment-modal-overlay');
+        
+        // Eventos
+        document.getElementById('payment-whatsapp').addEventListener('click', () => {
+            selectedPaymentMethod = 'whatsapp';
+            closePaymentModal();
+            proceedToCheckout();
+        });
+        document.getElementById('payment-instagram').addEventListener('click', () => {
+            selectedPaymentMethod = 'instagram';
+            closePaymentModal();
+            proceedToCheckout();
+        });
+        document.getElementById('close-payment-modal').addEventListener('click', closePaymentModal);
+        modalPaymentOverlay.addEventListener('click', (e) => {
+            if (e.target === modalPaymentOverlay) closePaymentModal();
+        });
+    }
+
+    function closePaymentModal() {
+        if (modalPaymentOverlay) {
+            modalPaymentOverlay.remove();
+            modalPaymentOverlay = null;
+        }
+    }
+
     // ============================================================
     // CARRITO Y FUNCIONES COMUNES
     // ============================================================
@@ -213,17 +322,23 @@ document.addEventListener("DOMContentLoaded", () => {
     async function updateCartDisplay() {
         if (!cartItemsContainer) return;
         cartItemsContainer.innerHTML = '';
-        
+
         if (cart.length === 0) {
             cartItemsContainer.innerHTML = '<p style="text-align:center; color:#999; padding:20px;">Tu carrito está vacío</p>';
             if (cartTotalElement) cartTotalElement.textContent = '$0.00';
             const discountLine = document.querySelector('.cart-discount');
             if (discountLine) discountLine.remove();
+            const couponDiscountLine = document.querySelector('.cart-coupon-discount');
+            if (couponDiscountLine) couponDiscountLine.remove();
             const progressContainer = document.getElementById('progress-container');
             if (progressContainer) progressContainer.style.display = 'none';
+            // Mostrar nuevamente la sección del cupón (si estaba oculta)
+            const couponSection = document.querySelector('.coupon-section');
+            if (couponSection) couponSection.style.display = 'block';
             return;
         }
-        
+
+        // 1. Calcular subtotal
         let subtotal = 0;
         cart.forEach(item => {
             const el = document.createElement('div');
@@ -251,19 +366,45 @@ document.addEventListener("DOMContentLoaded", () => {
             `;
             cartItemsContainer.appendChild(el);
         });
-        
+
+        // 2. Obtener promociones y calcular descuento por cantidad
         const promotions = await fetchActivePromotions();
-        let discount = 0;
+        let discountPromo = 0;
+        let promoApplied = null;
         if (promotions.length > 0) {
-            const promo = promotions[0]; // Aplicamos el descuento de la primera promoción activa (puedes elegir otra lógica)
+            const promo = promotions[0];
             const totalQuantity = cart.reduce((sum, item) => sum + item.quantity, 0);
             if (totalQuantity >= promo.min_quantity) {
-                if (promo.type === 'percentage') discount = subtotal * (promo.value / 100);
-                else if (promo.type === 'fixed') discount = promo.value;
+                if (promo.type === 'percentage') discountPromo = subtotal * (promo.value / 100);
+                else if (promo.type === 'fixed') discountPromo = promo.value;
+                promoApplied = promo;
             }
         }
-        const total = subtotal - discount;
-        // Dentro de updateCartDisplay, después de obtener promotions y calcular discount
+
+        // 3. Calcular subtotal después de promoción
+        const subtotalAfterPromo = subtotal - discountPromo;
+
+        // 4. Aplicar cupón (si existe) y obtener descuento del cupón
+        let discountCoupon = 0;
+        if (appliedCoupon) {
+            discountCoupon = applyCouponToCart(subtotalAfterPromo);
+            if (discountCoupon === 0 && appliedCoupon) {
+                // Cupón ya no es válido (por ejemplo, no alcanza compra mínima)
+                appliedCoupon = null;
+                const couponInput = document.getElementById('coupon-input');
+                const couponMsg = document.getElementById('coupon-message');
+                if (couponInput) couponInput.value = '';
+                if (couponMsg) couponMsg.textContent = '';
+                // Mostrar la sección del cupón si estaba oculta
+                const couponSection = document.querySelector('.coupon-section');
+                if (couponSection) couponSection.style.display = 'block';
+            }
+        }
+
+        // 5. Total final
+        const total = subtotalAfterPromo - discountCoupon;
+
+        // 6. Barra de progreso (promoción por cantidad)
         const progressContainer = document.getElementById('progress-container');
         if (progressContainer) {
             if (promotions.length > 0) {
@@ -274,7 +415,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 const itemsNeededSpan = document.getElementById('items-needed');
                 const progressBar = document.getElementById('progress-bar');
                 if (totalQuantity >= promo.min_quantity) {
-                    // Ya alcanzó el descuento
                     progressContainer.style.display = 'none';
                 } else {
                     progressContainer.style.display = 'block';
@@ -285,22 +425,55 @@ document.addEventListener("DOMContentLoaded", () => {
                 progressContainer.style.display = 'none';
             }
         }
+
+        // 7. Mostrar total
         if (cartTotalElement) cartTotalElement.textContent = `$${total.toFixed(2)}`;
-        
+
+        // 8. Mostrar líneas de descuento (promoción y cupón)
+        const cartFooter = document.querySelector('.cart-footer');
+        if (!cartFooter) return;
+
+        // Remover líneas existentes
         let discountLine = document.querySelector('.cart-discount');
-        if (discount > 0) {
-            if (!discountLine) {
-                const cartFooter = document.querySelector('.cart-footer');
-                if (cartFooter) {
-                    const discountHTML = `<div class="cart-discount" style="color:green; margin-bottom:5px;">Descuento: -$${discount.toFixed(2)}</div>`;
-                    cartFooter.insertBefore(createElementFromHTML(discountHTML), cartFooter.firstChild);
-                }
-            } else {
-                discountLine.textContent = `Descuento: -$${discount.toFixed(2)}`;
-            }
-        } else {
-            if (discountLine) discountLine.remove();
+        if (discountLine) discountLine.remove();
+        let couponDiscountLine = document.querySelector('.cart-coupon-discount');
+        if (couponDiscountLine) couponDiscountLine.remove();
+
+        // Insertar líneas en orden (descuento promoción, luego cupón)
+        if (discountPromo > 0) {
+            const discountHTML = `<div class="cart-discount" style="color:green; margin-bottom:5px;">Descuento por cantidad: -$${discountPromo.toFixed(2)}</div>`;
+            cartFooter.insertBefore(createElementFromHTML(discountHTML), cartFooter.firstChild);
         }
+        if (discountCoupon > 0 && appliedCoupon) {
+            const couponHTML = `
+                <div class="cart-coupon-discount" style="color:green; margin-bottom:5px;">
+                    Cupón ${appliedCoupon.code}: -$${discountCoupon.toFixed(2)}
+                    <button class="remove-coupon-btn" style="background: none; border: none; color: #dc3545; cursor: pointer; font-size: 0.8em; margin-left: 8px;">✖</button>
+                </div>
+            `;
+            cartFooter.insertBefore(createElementFromHTML(couponHTML), cartFooter.firstChild);
+        }
+
+        // Adjuntar evento para eliminar cupón (después de insertar)
+        document.querySelectorAll('.remove-coupon-btn').forEach(btn => {
+            btn.removeEventListener('click', handleRemoveCoupon);
+            btn.addEventListener('click', handleRemoveCoupon);
+        });
+    }
+
+    function handleRemoveCoupon(e) {
+        e.preventDefault();
+        appliedCoupon = null;
+        // Mostrar nuevamente la sección del cupón
+        const couponSection = document.querySelector('.coupon-section');
+        if (couponSection) couponSection.style.display = 'block';
+        // Limpiar el input y mensaje
+        const couponInput = document.getElementById('coupon-input');
+        if (couponInput) couponInput.value = '';
+        const couponMsg = document.getElementById('coupon-message');
+        if (couponMsg) couponMsg.textContent = '';
+        updateCartDisplay();
+        showToast('Cupón eliminado', 'info');
     }
 
     function updateCartCounter() {
@@ -598,7 +771,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // 2. Calcular total final
         const subtotal = cart.reduce((sum, item) => sum + (parseFloat(item.price.replace('$', '')) || 0) * item.quantity, 0);
-        const total = subtotal - discountAmount;
+        const total = subtotal - discountAmount - (couponDiscount || 0);
 
         // 3. Generar número de orden
         const orderNumber = generateOrderNumber();
@@ -619,11 +792,13 @@ document.addEventListener("DOMContentLoaded", () => {
             items: itemsData,
             subtotal: subtotal,
             discount_amount: discountAmount,
+            coupon_discount: couponDiscount || 0,
             total: total,
             payment_method: selectedPaymentMethod,
             status: 'pendiente',
             promo_id: promoApplied?.id || null,
-            promo_text: promoApplied ? `Descuento ${promoApplied.type === 'percentage' ? `${promoApplied.value}%` : `$${promoApplied.value}`} por ${promoApplied.min_quantity}+ productos` : null
+            promo_text: promoApplied ? `Descuento ${promoApplied.type === 'percentage' ? `${promoApplied.value}%` : `$${promoApplied.value}`} por ${promoApplied.min_quantity}+ productos` : null,
+            coupon_code: appliedCoupon?.code || null
         };
 
         // 6. Guardar en Supabase usando la función auxiliar
@@ -633,7 +808,33 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-        // 7. Construir el mensaje (igual que antes)
+        // 7. Actualizar uso del cupón si se aplicó
+        if (appliedCoupon) {
+            try {
+                const newCount = (appliedCoupon.used_count || 0) + 1;
+                const updateResponse = await fetch(`${SUPABASE_URL}/rest/v1/coupons?id=eq.${appliedCoupon.id}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ used_count: newCount })
+                });
+                if (!updateResponse.ok) {
+                    const errorText = await updateResponse.text();
+                    console.error('Error actualizando cupón:', updateResponse.status, errorText);
+                    showToast('No se pudo actualizar el cupón, pero tu pedido se guardó.', 'error');
+                } else {
+                    console.log('Cupón actualizado correctamente');
+                }
+            } catch (updateError) {
+                console.error('Error en la petición de actualización del cupón:', updateError);
+                showToast('No se pudo actualizar el cupón, pero tu pedido se guardó.', 'error');
+            }
+        }
+
+        // 8. Construir el mensaje
         const productsByCategory = {};
         cart.forEach(item => {
             let category = item.category || "productos";
@@ -667,14 +868,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
         msg += `💰 *Subtotal: $${subtotal.toFixed(2)}*\n`;
         if (discountAmount > 0) {
-            msg += `🎉 *Descuento aplicado: -$${discountAmount.toFixed(2)}*\n`;
+            msg += `🎉 *Descuento por cantidad: -$${discountAmount.toFixed(2)}*\n`;
             if (promoApplied) msg += `   (${promoApplied.banner_text})\n`;
+        }
+        if (couponDiscount > 0 && appliedCoupon) {
+            msg += `🎟️ *Cupón ${appliedCoupon.code}: -$${couponDiscount.toFixed(2)}*\n`;
         }
         msg += `💵 *Total: $${total.toFixed(2)}*\n\n`;
         msg += `🆔 *Número de orden: ${orderNumber}*\n\n`;
         msg += `¡Gracias! Espero tu respuesta para coordinar la entrega.`;
 
-        // 8. Enviar mensaje según método
+        // 9. Enviar mensaje según método
         if (selectedPaymentMethod === 'whatsapp') {
             const encodedMsg = encodeURIComponent(msg);
             window.open(`https://api.whatsapp.com/send?phone=593999406153&text=${encodedMsg}`, '_blank');
@@ -684,7 +888,7 @@ document.addEventListener("DOMContentLoaded", () => {
             window.open('https://ig.me/m/tejidosdelight', '_blank');
         }
 
-        // 9. Limpiar carrito
+        // 10. Limpiar carrito
         cart = [];
         saveCartToStorage();
         updateCartCounter();
@@ -1133,33 +1337,81 @@ document.addEventListener("DOMContentLoaded", () => {
         productLinks.forEach(link => link.addEventListener('click', openModal));
         modalCloseBtn.addEventListener('click', closeModal);
         modalOverlay.addEventListener('click', (e) => { if (e.target === modalOverlay) closeModal(); });
-        
+
         if (modalSizeSelect) modalSizeSelect.addEventListener('change', updateAddToCartButton);
         if (modalSizeCustomText) modalSizeCustomText.addEventListener('input', updateAddToCartButton);
         if (modalSizeCustomInput) modalSizeCustomInput.addEventListener('input', updateAddToCartButton);
         if (modalPackagingSelect) modalPackagingSelect.addEventListener('change', updateAddToCartButton);
-        
+
         if (waButton) waButton.addEventListener('click', sendWhatsApp);
         if (igButton) igButton.addEventListener('click', sendInstagram);
         if (modalAddToCartBtn) modalAddToCartBtn.addEventListener('click', addToCartFromModal);
         if (shareButton) shareButton.addEventListener('click', shareProduct);
-        
+
         if (quantityDecrease) quantityDecrease.addEventListener('click', decreaseQuantity);
         if (quantityIncrease) quantityIncrease.addEventListener('click', increaseQuantity);
         if (quantityInput) {
             quantityInput.addEventListener('input', updateQuantity);
             quantityInput.addEventListener('change', validateQuantity);
         }
-        
+
         if (searchInput) searchInput.addEventListener('input', filterProducts);
         if (filterButtons.length > 0) filterButtons.forEach(btn => btn.addEventListener('click', filterByCategory));
-        
+
         if (cartContainer) cartContainer.addEventListener('click', () => toggleCart());
         if (closeCartBtn) closeCartBtn.addEventListener('click', () => toggleCart(true));
         if (overlay) overlay.addEventListener('click', () => toggleCart(true));
         if (continueShoppingBtn) continueShoppingBtn.addEventListener('click', () => toggleCart(true));
-        if (checkoutBtn) checkoutBtn.addEventListener('click', proceedToCheckout);
-        
+        if (checkoutBtn) checkoutBtn.addEventListener('click', showPaymentModal);
+
+        // ----- EVENTOS DEL CUPÓN -----
+        const applyCouponBtn = document.getElementById('apply-coupon-btn');
+        const couponInput = document.getElementById('coupon-input');
+        const couponSection = document.querySelector('.coupon-section');
+
+        if (applyCouponBtn) {
+            applyCouponBtn.addEventListener('click', async () => {
+                const code = couponInput.value.trim().toUpperCase();
+                if (!code) {
+                    showToast('Ingresa un código', 'error');
+                    return;
+                }
+                const result = await validateCoupon(code);
+                if (!result.valid) {
+                    showToast(result.message, 'error');
+                    return;
+                }
+                // Calcular subtotal actual
+                let subtotal = cart.reduce((sum, item) => sum + (parseFloat(item.price.replace('$', '')) || 0) * item.quantity, 0);
+                // Calcular descuento por promoción (si existe) para obtener subtotal después de promo
+                const promotions = await fetchActivePromotions();
+                let discountPromo = 0;
+                if (promotions.length > 0) {
+                    const promo = promotions[0];
+                    const totalQuantity = cart.reduce((sum, item) => sum + item.quantity, 0);
+                    if (totalQuantity >= promo.min_quantity) {
+                        if (promo.type === 'percentage') discountPromo = subtotal * (promo.value / 100);
+                        else if (promo.type === 'fixed') discountPromo = promo.value;
+                    }
+                }
+                const subtotalAfterPromo = subtotal - discountPromo;
+                if (subtotalAfterPromo < result.coupon.min_purchase) {
+                    showToast(`Compra mínima de $${result.coupon.min_purchase} no alcanzada`, 'error');
+                    return;
+                }
+                appliedCoupon = result.coupon;
+                // Ocultar la sección del cupón
+                if (couponSection) couponSection.style.display = 'none';
+                // Mostrar toast con el descuento
+                const discountText = appliedCoupon.type === 'percentage'
+                    ? `${appliedCoupon.value}% de descuento`
+                    : `$${appliedCoupon.value} de descuento`;
+                showToast(`Cupón ${appliedCoupon.code} aplicado: ${discountText}`, 'success');
+                updateCartDisplay();
+            });
+        }
+        // ----- FIN EVENTOS CUPÓN -----
+
         document.addEventListener('click', function(e) {
             const target = e.target;
             const favBtn = target.closest('.favorite-btn');

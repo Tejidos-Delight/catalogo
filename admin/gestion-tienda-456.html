@@ -323,6 +323,7 @@
             <button class="admin-btn" onclick="showSection('products')">Ver Productos</button>
             <button class="admin-btn" onclick="showSection('add-product')">Agregar Producto</button>
             <button class="admin-btn" onclick="showSection('promotions')">Promociones</button>
+            <button class="admin-btn" onclick="showSection('coupons')">Cupones</button>
             <button class="admin-btn" onclick="showSection('orders')">Órdenes</button>
             <button class="admin-btn" onclick="showSection('export')">Exportar/Importar</button>
             <button class="admin-btn" onclick="window.open('../index.html')">Volver al Catálogo</button>
@@ -592,6 +593,57 @@
             <hr>
             <h3>Promociones Activas</h3>
             <div id="promotions-list"></div>
+        </div>
+
+        <div id="coupons-section" class="admin-section">
+            <h2>Gestión de Cupones</h2>
+            
+            <form id="coupon-form">
+                <input type="hidden" id="coupon-id">
+                <div class="form-group">
+                    <label>Código del cupón *</label>
+                    <input type="text" id="coupon-code" required placeholder="Ej: BIENVENIDA10">
+                </div>
+                <div class="form-group">
+                    <label>Descripción (opcional)</label>
+                    <input type="text" id="coupon-description" placeholder="Ej: 10% de descuento en tu primera compra">
+                </div>
+                <div class="form-group">
+                    <label>Tipo de descuento</label>
+                    <select id="coupon-type">
+                        <option value="percentage">Porcentaje (%)</option>
+                        <option value="fixed">Cantidad fija ($)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Valor</label>
+                    <input type="number" id="coupon-value" step="0.01" required>
+                </div>
+                <div class="form-group">
+                    <label>Compra mínima ($)</label>
+                    <input type="number" id="coupon-min-purchase" step="0.01" value="0">
+                </div>
+                <div class="form-group">
+                    <label>Fecha de expiración (opcional)</label>
+                    <input type="datetime-local" id="coupon-expires-at">
+                </div>
+                <div class="form-group">
+                    <label>Límite de usos (dejar en blanco para ilimitado)</label>
+                    <input type="number" id="coupon-usage-limit" min="1">
+                </div>
+                <div class="form-group checkbox-group">
+                    <span class="checkbox-label">Activo</span>
+                    <label class="checkbox-inline">
+                        <input type="checkbox" id="coupon-active" checked>
+                    </label>
+                </div>
+                <button type="submit" class="admin-btn">Guardar Cupón</button>
+                <button type="button" id="cancel-coupon-btn" class="admin-btn" style="background:#6c757d; display:none;">Cancelar</button>
+            </form>
+
+            <hr>
+            <h3>Cupones Existentes</h3>
+            <div id="coupons-list"></div>
         </div>
 
         <!-- Sección de Órdenes de Compra -->
