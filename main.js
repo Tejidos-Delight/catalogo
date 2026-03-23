@@ -792,13 +792,15 @@ document.addEventListener("DOMContentLoaded", () => {
             items: itemsData,
             subtotal: subtotal,
             discount_amount: discountAmount,
+            coupon_code: appliedCoupon?.code || null,
             coupon_discount: couponDiscount || 0,
+            coupon_type: appliedCoupon?.type || null,
+            coupon_value: appliedCoupon?.value || null,
             total: total,
             payment_method: selectedPaymentMethod,
             status: 'pendiente',
             promo_id: promoApplied?.id || null,
-            promo_text: promoApplied ? `Descuento ${promoApplied.type === 'percentage' ? `${promoApplied.value}%` : `$${promoApplied.value}`} por ${promoApplied.min_quantity}+ productos` : null,
-            coupon_code: appliedCoupon?.code || null
+            promo_text: promoApplied ? `Descuento ${promoApplied.type === 'percentage' ? `${promoApplied.value}%` : `$${promoApplied.value}`} por ${promoApplied.min_quantity}+ productos` : null
         };
 
         // 6. Guardar en Supabase usando la función auxiliar
@@ -811,19 +813,20 @@ document.addEventListener("DOMContentLoaded", () => {
         // 7. Actualizar uso del cupón si se aplicó
         if (appliedCoupon) {
             try {
-                const newCount = (appliedCoupon.used_count || 0) + 1;
-                const updateResponse = await fetch(`${SUPABASE_URL}/rest/v1/coupons?id=eq.${appliedCoupon.id}`, {
-                    method: 'PATCH',
+                console.log('Intentando actualizar cupón vía RPC:', appliedCoupon.id);
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/increment_coupon_usage`, {
+                    method: 'POST',
                     headers: {
                         'apikey': SUPABASE_KEY,
                         'Authorization': `Bearer ${SUPABASE_KEY}`,
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ used_count: newCount })
+                    body: JSON.stringify({ coupon_id: appliedCoupon.id })
                 });
-                if (!updateResponse.ok) {
-                    const errorText = await updateResponse.text();
-                    console.error('Error actualizando cupón:', updateResponse.status, errorText);
+                console.log('Respuesta del servidor:', response.status, response.statusText);
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('Error actualizando cupón:', response.status, errorText);
                     showToast('No se pudo actualizar el cupón, pero tu pedido se guardó.', 'error');
                 } else {
                     console.log('Cupón actualizado correctamente');

@@ -1005,10 +1005,8 @@ function renderOrdersList() {
                     <ul style="margin: 5px 0 0 20px;">${itemsHTML}</ul>
                 </div>
                 <div><strong>Subtotal:</strong> $${order.subtotal?.toFixed(2) || '0.00'}</div>
-                ${order.discount_amount > 0 ? `<div><strong>Descuento:</strong> -$${order.discount_amount.toFixed(2)}</div>` : ''}
-                ${order.coupon_code ? `<div><strong>Cupón:</strong> ${order.coupon_code} ( -$${order.coupon_discount?.toFixed(2) || '0.00'} )</div>` : ''}
-                ${order.promo_text ? `<div><strong>Promoción aplicada:</strong> ${order.promo_text}</div>` : ''}
-                <div class="order-total"><strong>Total:</strong> $${order.total?.toFixed(2) || '0.00'}</div>
+                ${order.discount_amount > 0 ? `<div><strong>Descuento (promoción):</strong> -$${order.discount_amount.toFixed(2)}${order.promo_text ? ` (${order.promo_text})` : ''}</div>` : ''}
+                ${order.coupon_code ? `<div><strong>Descuento (cupón ${order.coupon_code}${order.coupon_value !== null ? (order.coupon_type === 'percentage' ? ` ${order.coupon_value}%` : ` $${order.coupon_value}`) : ''}):</strong> -$${order.coupon_discount?.toFixed(2) || '0.00'}</div>` : ''}                <div class="order-total"><strong>Total:</strong> $${order.total?.toFixed(2) || '0.00'}</div>
                 <div><strong>Método de contacto:</strong> ${order.payment_method === 'whatsapp' ? 'WhatsApp' : 'Instagram'}</div>
                 
                 <div class="order-actions">
