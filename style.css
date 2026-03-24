@@ -1966,3 +1966,140 @@ footer {
 .product-card:nth-child(3) {
     animation-delay: 0.15s;
 }
+
+/* ==================================================== */
+/* 17. PÁGINAS ESTÁTICAS (Sobre Nosotros, Cuidados) */
+/* ==================================================== */
+.static-page-container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 40px 20px;
+    background: white;
+    border-radius: 20px;
+    box-shadow: var(--shadow);
+}
+.static-page-container h1 {
+    font-family: 'Dancing Script', cursive;
+    font-size: 2.8em;
+    color: var(--primary-color);
+    text-align: center;
+    margin-bottom: 20px;
+}
+.static-page-container h2 {
+    font-family: 'Josefin Sans', sans-serif;
+    font-weight: 700;
+    font-size: 1.8em;
+    color: var(--secondary-color);
+    margin-top: 30px;
+    margin-bottom: 15px;
+    border-left: 5px solid var(--primary-color);
+    padding-left: 15px;
+}
+.static-page-container h3 {
+    font-family: 'Josefin Sans', sans-serif;
+    font-weight: 600;
+    font-size: 1.3em;
+    color: var(--primary-color);
+    margin: 20px 0 10px;
+}
+.static-page-container p,
+.static-page-container li {
+    font-size: 1.05em;
+    line-height: 1.6;
+    color: var(--text-dark);
+    margin-bottom: 15px;
+}
+.static-page-container ul,
+.static-page-container ol {
+    margin: 10px 0 20px 30px;
+}
+.static-page-container .tip-card {
+    background: #f9f9f9;
+    border-left: 4px solid var(--primary-color);
+    padding: 15px 20px;
+    margin: 20px 0;
+    border-radius: 8px;
+}
+.static-page-container .tip-card strong {
+    color: var(--primary-color);
+}
+.static-page-container .highlight {
+    background-color: var(--accent-color);
+    padding: 20px;
+    border-radius: 12px;
+    margin: 30px 0;
+    text-align: center;
+    font-style: italic;
+    font-size: 1.1em;
+}
+
+/* Navegación en páginas estáticas (similar a category-bar pero con botones) */
+.nav-inline {
+    text-align: center;
+    margin: 10px 0 10px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px;
+}
+.nav-inline a {
+    display: inline-block;
+    padding: 6px 15px;
+    background: var(--primary-color);
+    color: white;
+    text-decoration: none;
+    border-radius: 30px;
+    transition: var(--transition);
+}
+.nav-inline a:hover {
+    background: var(--primary-dark);
+    transform: translateY(-2px);
+}
+
+/* Responsive: scroll horizontal para pantallas pequeñas */
+@media (max-width: 768px) {
+    .nav-inline {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        justify-content: flex-start;
+        gap: 6px;
+        padding: 6px 10px;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: thin;
+    }
+    .nav-inline a {
+        flex-shrink: 0;
+        white-space: nowrap;
+    }
+    /* Ocultar scrollbar (opcional) */
+    .nav-inline::-webkit-scrollbar {
+        display: none;
+    }
+    .nav-inline {
+        scrollbar-width: none;
+    }
+    .static-page-container {
+        padding: 20px;
+    }
+    .static-page-container h1 {
+        font-size: 2.2em;
+    }
+    .static-page-container h2 {
+        font-size: 1.5em;
+    }
+}
+
+.footer-links {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    margin-bottom: 15px;
+}
+.footer-links a {
+    color: #fcebe3;
+    text-decoration: none;
+    font-size: 0.9em;
+}
+.footer-links a:hover {
+    text-decoration: underline;
+}
