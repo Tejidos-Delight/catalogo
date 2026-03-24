@@ -2111,3 +2111,9 @@ footer {
 .footer-links a:hover {
     text-decoration: underline;
 }
+
+@media (max-width:720px) {
+    .nav-btn {
+        font-size: 0.75rem;
+    }
+}
