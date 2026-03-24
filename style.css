@@ -1872,10 +1872,18 @@ footer {
         display: flex;
         flex-wrap: nowrap;
         overflow-x: auto;
-        gap: 6px;
-        padding: 0 5px;
+        gap: 8px;
+        padding: 0;                         /* ← elimina el padding lateral */
         -webkit-overflow-scrolling: touch;
         scrollbar-width: thin;
+    }
+
+    /* Margen izquierdo al primer botón y margen derecho al último */
+    .filter-buttons .nav-btn:first-child {
+        margin-left: 15px;
+    }
+    .filter-buttons .nav-btn:last-child {
+        margin-right: 15px;
     }
 
     .filter-buttons::-webkit-scrollbar {
