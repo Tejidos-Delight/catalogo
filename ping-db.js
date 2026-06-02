@@ -1,31 +1,53 @@
-const { createClient } = require('@supabase/supabase-js');
+const https = require('https');
 
-// GitHub Actions inyectará estos valores automáticamente desde los Secrets
-const supabase = createClient(
-  process.env.SUPABASE_URL, 
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-async function keepAlive() {
-    // Intentamos leer un solo ID de tu tabla 'products' para generar actividad
-    const { data, error } = await supabase.from('products').select('id').limit(1);
-
-    if (error) {
-        console.error('Error al despertar la DB:', error.message);
-        process.exit(1);
-    } else {
-        console.log('¡Pulso exitoso! Supabase detectó actividad y no pausará el proyecto.');
-        process.exit(0); // Forzamos una salida limpia y exitosa
-    }
+if (!supabaseUrl || !supabaseKey) {
+  console.error("Error: Faltan las variables de entorno SUPABASE_URL o SUPABASE_SERVICE_ROLE_KEY.");
+  process.exit(1);
 }
 
-// Ejecutamos y aseguramos el manejo del flujo asíncrono
-keepAlive()
-  .then(() => {
-    // Por si acaso la función termina sin ejecutar los bloques internos
+// Limpiamos la URL por si acaso tiene barras finales
+const baseUrl = supabaseUrl.replace(/\/$/, "");
+
+// Apuntamos directamente a la raíz de la API de Supabase, que requiere autenticación
+const url = `${baseUrl}/rest/v1/`;
+
+const options = {
+  method: 'GET',
+  headers: {
+    'apikey': supabaseKey,
+    'Authorization': `Bearer ${supabaseKey}`
+  },
+  timeout: 10000 // 10 segundos de límite
+};
+
+console.log(`Enviando pulso de actividad a: ${baseUrl}`);
+
+const req = https.request(url, options, (res) => {
+  console.log(`Estado de respuesta del servidor: ${res.statusCode}`);
+  
+  // Cualquier código 2xx o incluso un 4xx (si la clave es correcta pero el endpoint cambia) 
+  // significa que la base de datos procesó la solicitud y está DESPIERTA.
+  if (res.statusCode >= 200 && res.statusCode < 500) {
+    console.log("¡Pulso exitoso! La infraestructura de Supabase detectó la actividad.");
     process.exit(0);
-  })
-  .catch((err) => {
-    console.error('Error crítico en el hilo de ejecución:', err);
+  } else {
+    console.error(`Error: El servidor respondió con un código inesperado: ${res.statusCode}`);
     process.exit(1);
-  });
+  }
+});
+
+req.on('error', (err) => {
+  console.error("Error crítico de conexión (Posible bloqueo de red o IPv6 en GitHub):", err.message);
+  process.exit(1);
+});
+
+req.on('timeout', () => {
+  console.error("Error: Tiempo de espera agotado al conectar con Supabase.");
+  req.destroy();
+  process.exit(1);
+});
+
+req.end();
