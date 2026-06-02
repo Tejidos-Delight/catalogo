@@ -15,7 +15,17 @@ async function keepAlive() {
         process.exit(1);
     } else {
         console.log('¡Pulso exitoso! Supabase detectó actividad y no pausará el proyecto.');
+        process.exit(0); // Forzamos una salida limpia y exitosa
     }
 }
 
-keepAlive();
+// Ejecutamos y aseguramos el manejo del flujo asíncrono
+keepAlive()
+  .then(() => {
+    // Por si acaso la función termina sin ejecutar los bloques internos
+    process.exit(0);
+  })
+  .catch((err) => {
+    console.error('Error crítico en el hilo de ejecución:', err);
+    process.exit(1);
+  });
